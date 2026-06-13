@@ -1,0 +1,25 @@
+{
+  "name": "hisup-backend",
+  "version": "1.0.0",
+  "description": "HiSUP - Backend (Node/Express) - thin service to call Oracle PL/SQL",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon --watch src --exec node src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "oracledb": "^5.4.0",
+    "jsonwebtoken": "^9.0.0",
+    "dotenv": "^16.0.3",
+    "cors": "^2.8.5",
+    "body-parser": "^1.20.2",
+    "bcryptjs": "^2.4.3"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  }
+}
