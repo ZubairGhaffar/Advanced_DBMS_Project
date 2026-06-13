@@ -70,7 +70,6 @@ CREATE OR REPLACE PROCEDURE ProcessFeePayment(
   p_amount IN NUMBER,
   p_method IN VARCHAR2,
   p_reference IN VARCHAR2,
-  p_bank_account IN VARCHAR2,
   p_out_receipt OUT VARCHAR2
 ) AS
   l_outstanding NUMBER;
@@ -84,8 +83,8 @@ BEGIN
     RAISE_APPLICATION_ERROR(-20006, 'Payment amount must be positive.');
   END IF;
 
-  INSERT INTO fee_payments (student_id, amount, payment_method, reference, bank_account_raw, bank_account_encrypted)
-  VALUES (p_student_id, p_amount, p_method, p_reference, p_bank_account, fn_encrypt_value(p_bank_account));
+  INSERT INTO fee_payments (student_id, amount, payment_method, reference)
+  VALUES (p_student_id, p_amount, p_method, p_reference);
 
   p_out_receipt := 'RCPT-' || TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS') || '-' || TO_CHAR(p_student_id);
   COMMIT;
@@ -93,6 +92,24 @@ EXCEPTION
   WHEN OTHERS THEN
     ROLLBACK;
     RAISE_APPLICATION_ERROR(-20010, 'Fee payment failed: ' || SQLERRM);
+END;
+/
+
+CREATE OR REPLACE PROCEDURE AuthenticateUser(
+  p_email IN VARCHAR2,
+  p_password IN VARCHAR2,
+  p_role OUT VARCHAR2,
+  p_refid OUT VARCHAR2
+) AS
+BEGIN
+  SELECT role, reference_id
+    INTO p_role, p_refid
+    FROM user_accounts
+   WHERE email = p_email
+     AND password_hash = p_password;
+EXCEPTION
+  WHEN NO_DATA_FOUND THEN
+    RAISE_APPLICATION_ERROR(-20001, 'Invalid email or password');
 END;
 /
 
@@ -262,33 +279,58 @@ CREATE OR REPLACE PROCEDURE AddExamResult(
   p_section_id IN NUMBER,
   p_json IN CLOB
 ) AS
+  FUNCTION grade_points_for(p_grade VARCHAR2) RETURN NUMBER IS
+  BEGIN
+    RETURN CASE UPPER(TRIM(p_grade))
+             WHEN 'A+' THEN 4.0
+             WHEN 'A' THEN 4.0
+             WHEN 'A-' THEN 3.7
+             WHEN 'B+' THEN 3.3
+             WHEN 'B' THEN 3.0
+             WHEN 'B-' THEN 2.7
+             WHEN 'C+' THEN 2.3
+             WHEN 'C' THEN 2.0
+             WHEN 'D' THEN 1.0
+             WHEN 'F' THEN 0
+             ELSE 0
+           END;
+  END;
+
+  FUNCTION letter_grade_for(p_grade VARCHAR2) RETURN VARCHAR2 IS
+  BEGIN
+    RETURN UPPER(TRIM(p_grade));
+  END;
 BEGIN
   MERGE INTO grades g
   USING (
-    SELECT jt.enrollment_id, jt.grade_value, jt.grade_points, jt.letter_grade
+    SELECT e.enrollment_id,
+           jt.grade_value
       FROM JSON_TABLE(p_json, '$[*]' COLUMNS (
-        enrollment_id NUMBER PATH '$.enrollmentID',
-        grade_value VARCHAR2(10) PATH '$.grade',
-        grade_points NUMBER PATH '$.points',
-        letter_grade VARCHAR2(5) PATH '$.letterGrade'
+        student_id NUMBER PATH '$.studentID',
+        grade_value VARCHAR2(10) PATH '$.grade'
       )) jt
+      JOIN enrollments e ON e.student_id = jt.student_id AND e.section_id = p_section_id
   ) src
   ON (g.enrollment_id = src.enrollment_id)
   WHEN MATCHED THEN
     UPDATE SET g.grade_value = src.grade_value,
-               g.grade_points = src.grade_points,
-               g.letter_grade = src.letter_grade,
+               g.grade_points = grade_points_for(src.grade_value),
+               g.letter_grade = letter_grade_for(src.grade_value),
                g.graded_on = SYSDATE
   WHEN NOT MATCHED THEN
     INSERT (grade_id, enrollment_id, grade_value, grade_points, letter_grade)
-    VALUES (grades_seq.NEXTVAL, src.enrollment_id, src.grade_value, src.grade_points, src.letter_grade);
+    VALUES (grades_seq.NEXTVAL, src.enrollment_id, src.grade_value, grade_points_for(src.grade_value), letter_grade_for(src.grade_value));
 
   DELETE FROM grades g
    WHERE g.enrollment_id IN (
      SELECT e.enrollment_id FROM enrollments e WHERE e.section_id = p_section_id
    )
      AND g.enrollment_id NOT IN (
-       SELECT enrollment_id FROM JSON_TABLE(p_json, '$[*]' COLUMNS (enrollment_id NUMBER PATH '$.enrollmentID'))
+       SELECT e.enrollment_id
+         FROM JSON_TABLE(p_json, '$[*]' COLUMNS (
+           student_id NUMBER PATH '$.studentID'
+         )) jt
+         JOIN enrollments e ON e.student_id = jt.student_id AND e.section_id = p_section_id
      );
 
   COMMIT;
@@ -395,6 +437,15 @@ BEGIN
   IF p_keyword IS NOT NULL THEN
     l_sql := l_sql || ' AND (LOWER(course_title) LIKE LOWER(:keyword) OR LOWER(course_code) LIKE LOWER(:keyword))';
   END IF;
-  OPEN p_cursor FOR l_sql USING p_department_id, '%' || p_keyword || '%';
+
+  IF p_department_id IS NOT NULL AND p_keyword IS NOT NULL THEN
+    OPEN p_cursor FOR l_sql USING p_department_id, '%' || p_keyword || '%';
+  ELSIF p_department_id IS NOT NULL THEN
+    OPEN p_cursor FOR l_sql USING p_department_id;
+  ELSIF p_keyword IS NOT NULL THEN
+    OPEN p_cursor FOR l_sql USING '%' || p_keyword || '%';
+  ELSE
+    OPEN p_cursor FOR l_sql;
+  END IF;
 END;
 /

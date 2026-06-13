@@ -2,14 +2,14 @@ const oracledb = require('oracledb');
 const oracle = require('../utils/oracleHelper');
 
 exports.register = async (req, res) => {
-  const { firstName, lastName, email, deptID } = req.body;
-  if (!firstName || !lastName || !email || !deptID) return res.status(400).json({ message: 'Missing fields' });
+  const { firstName, lastName, email, cnic, programID } = req.body;
+  if (!firstName || !lastName || !email || !cnic || !programID) return res.status(400).json({ message: 'Missing fields' });
 
   const plsql = `
   DECLARE
     p_studentid NUMBER;
   BEGIN
-    RegisterStudent(:p_firstName, :p_lastName, :p_email, :p_deptID, :out_studentid);
+    RegisterStudent(:p_firstName, :p_lastName, :p_email, :p_cnic, :p_programID, :out_studentid);
   END;
   `;
 
@@ -17,7 +17,8 @@ exports.register = async (req, res) => {
     p_firstName: firstName,
     p_lastName: lastName,
     p_email: email,
-    p_deptID: deptID,
+    p_cnic: cnic,
+    p_programID: programID,
     out_studentid: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
   };
 
@@ -32,11 +33,12 @@ exports.register = async (req, res) => {
 };
 
 exports.enroll = async (req, res) => {
-  const { studentID, sectionID } = req.body;
+  const studentID = req.user && req.user.referenceID ? req.user.referenceID : req.body.studentID;
+  const { sectionID } = req.body;
   if (!studentID || !sectionID) return res.status(400).json({ message: 'Missing studentID or sectionID' });
 
   const plsql = `BEGIN EnrollInCourse(:p_studentID, :p_sectionID); END;`;
-  const binds = { p_studentID: studentID, p_sectionID: sectionID };
+  const binds = { p_studentID: Number(studentID), p_sectionID: sectionID };
 
   const maxRetries = 3;
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -57,7 +59,8 @@ exports.enroll = async (req, res) => {
 };
 
 exports.payFee = async (req, res) => {
-  const { studentID, amount, method, reference } = req.body;
+  const studentID = req.user && req.user.referenceID ? req.user.referenceID : req.body.studentID;
+  const { amount, method, reference } = req.body;
   if (!studentID || !amount || !method) return res.status(400).json({ message: 'Missing payment fields' });
 
   const conn = await oracle.getConnection();
@@ -85,7 +88,7 @@ exports.payFee = async (req, res) => {
 };
 
 exports.availableCourses = async (req, res) => {
-  const studentID = req.user && req.user.referenceID ? req.user.referenceID : req.query.studentID;
+  const studentID = req.user && req.user.referenceID;
   if (!studentID) return res.status(400).json({ message: 'studentID required' });
 
   const sql = `SELECT * FROM vw_AvailableCourses WHERE student_id = :id`;
@@ -99,7 +102,7 @@ exports.availableCourses = async (req, res) => {
 };
 
 exports.dashboard = async (req, res) => {
-  const studentID = req.user && req.user.referenceID ? req.user.referenceID : req.query.studentID;
+  const studentID = req.user && req.user.referenceID;
   if (!studentID) return res.status(400).json({ message: 'studentID required' });
 
   const sql = `SELECT * FROM vw_StudentDashboard WHERE student_id = :id`;
@@ -108,6 +111,62 @@ exports.dashboard = async (req, res) => {
     return res.json({ data: result.rows });
   } catch (err) {
     console.error('Dashboard error', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.getFeeSlip = async (req, res) => {
+  const studentID = req.user && req.user.referenceID;
+  if (!studentID) return res.status(400).json({ message: 'studentID required' });
+
+  const conn = await oracle.getConnection();
+  try {
+    const result = await conn.execute(
+      `BEGIN GenerateFeeSlip(:p_studentID, :p_cursor); END;`,
+      {
+        p_studentID: Number(studentID),
+        p_cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR }
+      },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+
+    const rows = await result.outBinds.p_cursor.getRows(1000);
+    await result.outBinds.p_cursor.close();
+    return res.json(rows);
+  } catch (err) {
+    console.error('Fee slip error', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  } finally {
+    try { await conn.close(); } catch (closeErr) { console.error('Connection close failed', closeErr); }
+  }
+};
+
+exports.getLibraryOverdue = async (req, res) => {
+  const studentID = req.user && req.user.referenceID;
+  if (!studentID) return res.status(400).json({ message: 'studentID required' });
+
+  try {
+    const result = await oracle.execute(
+      'SELECT * FROM vw_LibraryOverdue WHERE student_id = :id',
+      { id: Number(studentID) },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+    return res.json(result.rows);
+  } catch (err) {
+    console.error('Library overdue error', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.getResultCard = async (req, res) => {
+  const studentID = req.user && req.user.referenceID;
+  if (!studentID) return res.status(400).json({ message: 'studentID required' });
+
+  try {
+    const result = await oracle.execute('SELECT * FROM vw_ResultCard WHERE student_id = :id', { id: Number(studentID) }, { outFormat: oracledb.OUT_FORMAT_OBJECT });
+    return res.json(result.rows);
+  } catch (err) {
+    console.error('Result card error', err);
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -122,7 +181,7 @@ function streamToBuffer(stream) {
 }
 
 exports.downloadTranscript = async (req, res) => {
-  const studentID = req.user && req.user.referenceID ? req.user.referenceID : req.query.studentID;
+  const studentID = req.user && req.user.referenceID;
   if (!studentID) return res.status(400).json({ message: 'studentID required' });
 
   const conn = await oracle.getConnection();

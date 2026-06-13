@@ -11,9 +11,7 @@ exports.login = async (req, res) => {
     p_role VARCHAR2(50);
     p_refid VARCHAR2(100);
   BEGIN
-    AuthenticateUser(:p_email, :p_password, p_role, p_refid);
-    :out_role := p_role;
-    :out_refid := p_refid;
+    AuthenticateUser(:p_email, :p_password, :out_role, :out_refid);
   END;
   `;
 

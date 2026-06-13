@@ -32,7 +32,7 @@ const Workload = () => {
         <tbody>
           {workload.map((row, index) => (
             <tr key={`${row.section_id}-${index}`}>
-              <td>{row.rank || index + 1}</td>
+              <td>{row.workload_rank || index + 1}</td>
               <td>{row.section_id}</td>
               <td>{row.course_name}</td>
               <td>{row.enrolled_students}</td>

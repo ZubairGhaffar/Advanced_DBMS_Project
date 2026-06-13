@@ -16,6 +16,8 @@ const NavBar = () => {
                 <li className="nav-item"><Link className="nav-link" to="/student/dashboard">Dashboard</Link></li>
                 <li className="nav-item"><Link className="nav-link" to="/student/register">Register</Link></li>
                 <li className="nav-item"><Link className="nav-link" to="/student/pay-fee">Fees</Link></li>
+                <li className="nav-item"><Link className="nav-link" to="/student/library">Library</Link></li>
+                <li className="nav-item"><Link className="nav-link" to="/student/results">Results</Link></li>
               </>
             )}
             {user?.role === 'Faculty' && (
@@ -23,6 +25,16 @@ const NavBar = () => {
                 <li className="nav-item"><Link className="nav-link" to="/faculty/attendance">Attendance</Link></li>
                 <li className="nav-item"><Link className="nav-link" to="/faculty/grade-entry">Grades</Link></li>
                 <li className="nav-item"><Link className="nav-link" to="/faculty/workload">Workload</Link></li>
+              </>
+            )}
+            {user?.role === 'Finance' && (
+              <>
+                <li className="nav-item"><Link className="nav-link" to="/finance/dashboard">Finance</Link></li>
+              </>
+            )}
+            {user?.role === 'Admin' && (
+              <>
+                <li className="nav-item"><Link className="nav-link" to="/admin/dashboard">Admin</Link></li>
               </>
             )}
           </ul>

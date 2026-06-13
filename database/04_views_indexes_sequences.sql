@@ -3,10 +3,70 @@ SET DEFINE OFF;
 CREATE OR REPLACE VIEW vw_StudentDashboard AS
 SELECT s.student_id,
        s.first_name || ' ' || s.last_name AS student_name,
-       fn_CalculateCGPA(s.student_id) AS cgpa,
+       fn_CalculateCGPA(s.student_id) AS gpa,
        fn_GetAttendancePercentage(s.student_id) AS attendance_percent,
        fn_GetOutstandingFee(s.student_id) AS outstanding_fees
   FROM students s;
+/
+
+CREATE OR REPLACE VIEW vw_AvailableCourses AS
+SELECT st.student_id,
+       sec.section_id,
+       c.course_code,
+       c.course_title,
+       sec.semester || ' ' || sec.year AS term,
+       sec.available_seats,
+       f.first_name || ' ' || f.last_name AS faculty_name,
+       c.course_code || ' - ' || c.course_title || ' (' || sec.semester || ' ' || sec.year || ')' AS section_name
+  FROM sections sec
+  JOIN courses c ON sec.course_id = c.course_id
+  JOIN faculty f ON sec.faculty_id = f.faculty_id
+  JOIN students st ON 1=1
+ WHERE NOT EXISTS (
+   SELECT 1 FROM enrollments e WHERE e.student_id = st.student_id AND e.section_id = sec.section_id
+ );
+/
+
+CREATE OR REPLACE VIEW vw_FacultySections AS
+SELECT sec.section_id,
+       sec.faculty_id,
+       f.first_name || ' ' || f.last_name AS faculty_name,
+       c.course_code,
+       c.course_title,
+       sec.semester,
+       sec.year,
+       sec.capacity,
+       sec.available_seats,
+       c.course_code || ' - ' || c.course_title || ' (' || sec.semester || ' ' || sec.year || ')' AS section_name
+  FROM sections sec
+  JOIN courses c ON sec.course_id = c.course_id
+  JOIN faculty f ON sec.faculty_id = f.faculty_id;
+/
+
+CREATE OR REPLACE VIEW vw_SectionStudents AS
+SELECT e.enrollment_id,
+       e.section_id,
+       s.student_id,
+       s.first_name || ' ' || s.last_name AS student_name
+  FROM enrollments e
+  JOIN students s ON e.student_id = s.student_id;
+/
+
+CREATE OR REPLACE VIEW vw_FacultyWorkload AS
+SELECT sec.faculty_id,
+       sec.section_id,
+       c.course_code,
+       c.course_title,
+       c.course_code || ' - ' || c.course_title AS course_name,
+       sec.semester || ' ' || sec.year AS term,
+       sec.capacity,
+       sec.available_seats,
+       COUNT(e.enrollment_id) AS enrolled_students,
+       RANK() OVER (PARTITION BY sec.faculty_id ORDER BY COUNT(e.enrollment_id) DESC) AS workload_rank
+  FROM sections sec
+  JOIN courses c ON sec.course_id = c.course_id
+  LEFT JOIN enrollments e ON sec.section_id = e.section_id
+ GROUP BY sec.faculty_id, sec.section_id, c.course_code, c.course_title, sec.semester, sec.year, sec.capacity, sec.available_seats;
 /
 
 CREATE OR REPLACE VIEW vw_FacultyCourseLoad AS

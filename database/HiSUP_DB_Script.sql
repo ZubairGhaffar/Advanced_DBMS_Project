@@ -753,7 +753,16 @@ BEGIN
   IF p_keyword IS NOT NULL THEN
     l_sql := l_sql || ' AND (LOWER(course_title) LIKE LOWER(:keyword) OR LOWER(course_code) LIKE LOWER(:keyword))';
   END IF;
-  OPEN p_cursor FOR l_sql USING p_department_id, '%' || p_keyword || '%';
+
+  IF p_department_id IS NOT NULL AND p_keyword IS NOT NULL THEN
+    OPEN p_cursor FOR l_sql USING p_department_id, '%' || p_keyword || '%';
+  ELSIF p_department_id IS NOT NULL THEN
+    OPEN p_cursor FOR l_sql USING p_department_id;
+  ELSIF p_keyword IS NOT NULL THEN
+    OPEN p_cursor FOR l_sql USING '%' || p_keyword || '%';
+  ELSE
+    OPEN p_cursor FOR l_sql;
+  END IF;
 END;
 /
 

@@ -17,6 +17,8 @@ const Login = () => {
       login(res.data.token, res.data.role, res.data.referenceID);
       if (res.data.role === 'Student') navigate('/student/dashboard');
       else if (res.data.role === 'Faculty') navigate('/faculty/attendance');
+      else if (res.data.role === 'Finance') navigate('/finance/dashboard');
+      else if (res.data.role === 'Admin') navigate('/admin/dashboard');
       else navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');

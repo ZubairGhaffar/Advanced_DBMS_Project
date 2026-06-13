@@ -9,6 +9,9 @@ router.post('/enroll', verifyToken, isStudent, studentController.enroll);
 router.post('/pay-fee', verifyToken, isStudent, studentController.payFee);
 router.get('/dashboard', verifyToken, isStudent, studentController.dashboard);
 router.get('/available-courses', verifyToken, isStudent, studentController.availableCourses);
+router.get('/fee-slip', verifyToken, isStudent, studentController.getFeeSlip);
+router.get('/library-overdue', verifyToken, isStudent, studentController.getLibraryOverdue);
+router.get('/result-card', verifyToken, isStudent, studentController.getResultCard);
 router.get('/transcript', verifyToken, isStudent, studentController.downloadTranscript);
 
 module.exports = router;

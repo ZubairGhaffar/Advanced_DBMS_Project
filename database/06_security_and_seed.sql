@@ -23,11 +23,15 @@ GRANT EXECUTE ON GenerateFeeSlip TO db_student, db_finance, db_admin;
 GRANT EXECUTE ON SearchCourses TO db_student, db_faculty, db_admin, db_finance;
 
 GRANT SELECT ON vw_StudentDashboard TO db_student, db_admin;
+GRANT SELECT ON vw_AvailableCourses TO db_student, db_admin;
+GRANT SELECT ON vw_FacultySections TO db_faculty, db_admin;
+GRANT SELECT ON vw_SectionStudents TO db_faculty, db_admin;
+GRANT SELECT ON vw_FacultyWorkload TO db_faculty, db_admin;
 GRANT SELECT ON vw_FacultyCourseLoad TO db_faculty, db_admin;
 GRANT SELECT ON vw_DepartmentEnrollmentSummary TO db_admin;
 GRANT SELECT ON vw_FeeDefaulters TO db_finance, db_admin;
 GRANT SELECT ON vw_AttendanceShortfall TO db_admin;
-GRANT SELECT ON vw_LibraryOverdue TO db_admin;
+GRANT SELECT ON vw_LibraryOverdue TO db_student, db_admin;
 GRANT SELECT ON vw_ExamTimetable TO db_admin;
 GRANT SELECT ON vw_ResultCard TO db_student, db_admin;
 

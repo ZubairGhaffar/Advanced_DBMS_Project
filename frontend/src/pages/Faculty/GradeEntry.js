@@ -7,7 +7,7 @@ const GradeEntry = () => {
 
   const loadStudents = async () => {
     const res = await api.get(`/faculty/section-students?sectionID=${section}`);
-    setGrades(res.data.map(s => ({ studentID: s.student_id, grade: '' })));
+    setGrades(res.data.map(s => ({ studentID: s.student_id, studentName: s.student_name, grade: '' })));
   };
 
   const submit = async () => {
@@ -25,7 +25,7 @@ const GradeEntry = () => {
 
       {grades.map((g, i) => (
         <div className="mb-2" key={g.studentID}>
-          <span className="me-2">{g.studentID}</span>
+          <span className="me-2">{g.studentName || g.studentID}</span>
           <input className="form-control d-inline-block" style={{width:120}} value={g.grade} onChange={e => { const copy=[...grades]; copy[i].grade=e.target.value; setGrades(copy); }} />
         </div>
       ))}
