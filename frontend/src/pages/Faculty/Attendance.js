@@ -17,15 +17,18 @@ const Attendance = () => {
   }, []);
 
   const loadStudents = async (sec) => {
+    if (!sec) return;
     try {
       const res = await api.get(`/faculty/section-students?sectionID=${sec}`);
-      setStudents(res.data || []);
-    } catch (err) { }
+      setStudents((res.data || []).map(student => ({ ...student, present: true })));
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const toggle = (idx) => {
     const copy = [...students];
-    copy[idx].present = !copy[idx].present;
+    copy[idx] = { ...copy[idx], present: !copy[idx].present };
     setStudents(copy);
   };
 
@@ -45,18 +48,22 @@ const Attendance = () => {
         </select>
       </div>
 
-      <table className="table">
-        <thead><tr><th>Student</th><th>Present</th></tr></thead>
-        <tbody>
-          {students.map((st, i) => (
-            <tr key={st.student_id}>
-              <td>{st.name}</td>
-              <td><input type="checkbox" checked={!!st.present} onChange={() => toggle(i)} /></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <button className="btn btn-primary" onClick={submit}>Submit</button>
+      {students.length === 0 ? (
+        <div className="alert alert-secondary">Choose a section to load students.</div>
+      ) : (
+        <table className="table">
+          <thead><tr><th>Student</th><th>Present</th></tr></thead>
+          <tbody>
+            {students.map((st, i) => (
+              <tr key={st.student_id}>
+                <td>{st.name || st.student_name || st.student_id}</td>
+                <td><input type="checkbox" checked={!!st.present} onChange={() => toggle(i)} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <button className="btn btn-primary" onClick={submit} disabled={!students.length}>Submit</button>
     </div>
   );
 };

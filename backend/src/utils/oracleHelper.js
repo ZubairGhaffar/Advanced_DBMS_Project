@@ -10,4 +10,8 @@ async function execute(sql, binds = {}, options = {}) {
   }
 }
 
-module.exports = { execute };
+async function getConnection() {
+  return db.getConnection();
+}
+
+module.exports = { execute, getConnection };

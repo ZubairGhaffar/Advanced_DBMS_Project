@@ -8,5 +8,7 @@ router.post('/register', studentController.register);
 router.post('/enroll', verifyToken, isStudent, studentController.enroll);
 router.post('/pay-fee', verifyToken, isStudent, studentController.payFee);
 router.get('/dashboard', verifyToken, isStudent, studentController.dashboard);
+router.get('/available-courses', verifyToken, isStudent, studentController.availableCourses);
+router.get('/transcript', verifyToken, isStudent, studentController.downloadTranscript);
 
 module.exports = router;

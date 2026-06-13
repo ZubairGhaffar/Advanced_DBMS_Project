@@ -36,3 +36,45 @@ exports.submitGrades = async (req, res) => {
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+exports.getSections = async (req, res) => {
+  const facultyID = req.user && req.user.referenceID ? req.user.referenceID : req.query.facultyID;
+  if (!facultyID) return res.status(400).json({ message: 'facultyID required' });
+
+  const sql = `SELECT * FROM vw_FacultySections WHERE faculty_id = :id`;
+  try {
+    const result = await oracle.execute(sql, { id: facultyID }, { outFormat: oracledb.OUT_FORMAT_OBJECT });
+    return res.json(result.rows);
+  } catch (err) {
+    console.error('Faculty sections error', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.getWorkload = async (req, res) => {
+  const facultyID = req.user && req.user.referenceID ? req.user.referenceID : req.query.facultyID;
+  if (!facultyID) return res.status(400).json({ message: 'facultyID required' });
+
+  const sql = `SELECT * FROM vw_FacultyWorkload WHERE faculty_id = :id`;
+  try {
+    const result = await oracle.execute(sql, { id: facultyID }, { outFormat: oracledb.OUT_FORMAT_OBJECT });
+    return res.json(result.rows);
+  } catch (err) {
+    console.error('Faculty workload error', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.getSectionStudents = async (req, res) => {
+  const sectionID = req.query.sectionID;
+  if (!sectionID) return res.status(400).json({ message: 'sectionID required' });
+
+  const sql = `SELECT * FROM vw_SectionStudents WHERE section_id = :sectionID`;
+  try {
+    const result = await oracle.execute(sql, { sectionID }, { outFormat: oracledb.OUT_FORMAT_OBJECT });
+    return res.json(result.rows);
+  } catch (err) {
+    console.error('Section students error', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};

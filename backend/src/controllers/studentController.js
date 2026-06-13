@@ -60,21 +60,40 @@ exports.payFee = async (req, res) => {
   const { studentID, amount, method, reference } = req.body;
   if (!studentID || !amount || !method) return res.status(400).json({ message: 'Missing payment fields' });
 
-  const plsql = `BEGIN ProcessFeePayment(:p_studentID, :p_amount, :p_method, :p_reference, :out_receipt); END;`;
-  const binds = {
-    p_studentID: studentID,
-    p_amount: amount,
-    p_method: method,
-    p_reference: reference || null,
-    out_receipt: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 4000 }
-  };
-
+  const conn = await oracle.getConnection();
   try {
-    const result = await oracle.execute(plsql, binds, { autoCommit: true });
+    await conn.execute('BEGIN NULL; END;');
+    const plsql = `BEGIN ProcessFeePayment(:p_studentID, :p_amount, :p_method, :p_reference, :out_receipt); END;`;
+    const binds = {
+      p_studentID: studentID,
+      p_amount: amount,
+      p_method: method,
+      p_reference: reference || null,
+      out_receipt: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 4000 }
+    };
+    const result = await conn.execute(plsql, binds);
+    await conn.commit();
     return res.json({ receipt: result.outBinds.out_receipt });
   } catch (err) {
+    try { await conn.rollback(); } catch (rollbackErr) { console.error('Rollback failed', rollbackErr); }
     if (err && err.errorNum === 20001) return res.status(400).json({ message: err.message });
     console.error('Payment error', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  } finally {
+    try { await conn.close(); } catch (closeErr) { console.error('Connection close failed', closeErr); }
+  }
+};
+
+exports.availableCourses = async (req, res) => {
+  const studentID = req.user && req.user.referenceID ? req.user.referenceID : req.query.studentID;
+  if (!studentID) return res.status(400).json({ message: 'studentID required' });
+
+  const sql = `SELECT * FROM vw_AvailableCourses WHERE student_id = :id`;
+  try {
+    const result = await oracle.execute(sql, { id: studentID }, { outFormat: oracledb.OUT_FORMAT_OBJECT });
+    return res.json(result.rows);
+  } catch (err) {
+    console.error('Available courses error', err);
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -90,5 +109,54 @@ exports.dashboard = async (req, res) => {
   } catch (err) {
     console.error('Dashboard error', err);
     return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+function streamToBuffer(stream) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    stream.on('data', (chunk) => chunks.push(chunk));
+    stream.on('end', () => resolve(Buffer.concat(chunks)));
+    stream.on('error', reject);
+  });
+}
+
+exports.downloadTranscript = async (req, res) => {
+  const studentID = req.user && req.user.referenceID ? req.user.referenceID : req.query.studentID;
+  if (!studentID) return res.status(400).json({ message: 'studentID required' });
+
+  const conn = await oracle.getConnection();
+  try {
+    const plsql = `DECLARE
+      p_blob BLOB;
+    BEGIN
+      GenerateTranscriptPDF(:p_studentID, p_blob);
+      :out_blob := p_blob;
+    END;`;
+
+    const binds = {
+      p_studentID: studentID,
+      out_blob: { dir: oracledb.BIND_OUT, type: oracledb.BLOB }
+    };
+
+    const result = await conn.execute(plsql, binds, { autoCommit: false });
+    const outBlob = result.outBinds.out_blob;
+    if (!outBlob) return res.status(404).json({ message: 'Transcript not available' });
+
+    let pdfBuffer;
+    if (Buffer.isBuffer(outBlob)) {
+      pdfBuffer = outBlob;
+    } else {
+      pdfBuffer = await streamToBuffer(outBlob);
+    }
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="transcript.pdf"');
+    return res.send(pdfBuffer);
+  } catch (err) {
+    console.error('Transcript error', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  } finally {
+    try { await conn.close(); } catch (closeErr) { console.error('Connection close failed', closeErr); }
   }
 };
