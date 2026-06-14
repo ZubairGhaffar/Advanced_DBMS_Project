@@ -4,14 +4,12 @@ import api from '../api/api';
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
+  const [user, setUser] = useState(() => {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
     const referenceID = localStorage.getItem('referenceID');
-    if (token) setUser({ token, role, referenceID });
-  }, []);
+    return token ? { token, role, referenceID } : null;
+  });
 
   const login = (token, role, referenceID) => {
     localStorage.setItem('token', token);
