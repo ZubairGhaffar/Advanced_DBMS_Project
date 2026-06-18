@@ -24,13 +24,14 @@ const AdminStudents = React.lazy(() => import('./pages/Admin/StudentManagement')
 const AdminFaculty = React.lazy(() => import('./pages/Admin/FacultyManagement'));
 const AdminCourses = React.lazy(() => import('./pages/Admin/CourseManagement'));
 const AdminHostel = React.lazy(() => import('./pages/Admin/Hostel'));
+const LibraryManagement = React.lazy(() => import('./pages/Admin/LibraryManagement'));
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <NavBar />
-        <React.Suspense fallback={<div className="p-4 text-center text-secondary">Loading page contents...</div>}>
+        <React.Suspense fallback={<div className="p-4 text-center text-secondary notranslate" translate="no">Loading page contents...</div>}>
           <Routes>
             <Route path="/login" element={<Login />} />
 
@@ -56,6 +57,7 @@ function App() {
             <Route path="/admin/faculty" element={<ProtectedRoute roles={["Admin"]}><AdminFaculty /></ProtectedRoute>} />
             <Route path="/admin/courses" element={<ProtectedRoute roles={["Admin"]}><AdminCourses /></ProtectedRoute>} />
             <Route path="/admin/hostel" element={<ProtectedRoute roles={["Admin"]}><AdminHostel /></ProtectedRoute>} />
+            <Route path="/admin/library" element={<ProtectedRoute roles={["Admin"]}><LibraryManagement /></ProtectedRoute>} />
 
             {/* Root Welcome page */}
             <Route path="/" element={

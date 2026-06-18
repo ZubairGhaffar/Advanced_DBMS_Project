@@ -132,7 +132,7 @@ exports.getFeeSlip = async (req, res) => {
 
     const rows = await result.outBinds.p_cursor.getRows(1000);
     await result.outBinds.p_cursor.close();
-    return res.json(rows);
+    return res.json(oracle.processRows(rows));
   } catch (err) {
     console.error('Fee slip error', err);
     return res.status(500).json({ message: 'Internal server error' });
@@ -217,5 +217,115 @@ exports.downloadTranscript = async (req, res) => {
     return res.status(500).json({ message: 'Internal server error' });
   } finally {
     try { await conn.close(); } catch (closeErr) { console.error('Connection close failed', closeErr); }
+  }
+};
+
+exports.getEnrolledCourses = async (req, res) => {
+  const studentID = req.user && req.user.referenceID;
+  if (!studentID) return res.status(400).json({ message: 'studentID required' });
+
+  const sql = `
+    SELECT e.enrollment_id,
+           c.course_code,
+           c.course_title,
+           c.credit_hours,
+           sec.section_id,
+           sec.semester,
+           sec.year,
+           sec.room,
+           sec.schedule,
+           f.first_name || ' ' || f.last_name AS instructor_name,
+           f.email AS instructor_email,
+           d.dept_name AS instructor_dept
+      FROM enrollments e
+      JOIN sections sec ON e.section_id = sec.section_id
+      JOIN courses c ON sec.course_id = c.course_id
+      JOIN faculty f ON sec.faculty_id = f.faculty_id
+      JOIN departments d ON f.department_id = d.dept_id
+     WHERE e.student_id = :id
+  `;
+  try {
+    const result = await oracle.execute(sql, { id: Number(studentID) }, { outFormat: oracledb.OUT_FORMAT_OBJECT });
+    
+    // Calculate attendance percentage per enrollment
+    const enrolled = [];
+    for (const row of result.rows) {
+      const attSql = `
+        SELECT 
+          NVL(SUM(CASE WHEN status = 'Present' THEN 1 ELSE 0 END), 0) AS present,
+          COUNT(*) AS total
+        FROM attendance_records
+        WHERE enrollment_id = :enrollment_id
+      `;
+      const attRes = await oracle.execute(attSql, { enrollment_id: row.ENROLLMENT_ID }, { outFormat: oracledb.OUT_FORMAT_OBJECT });
+      const present = attRes.rows[0].PRESENT || 0;
+      const total = attRes.rows[0].TOTAL || 0;
+      const pct = total > 0 ? Number(((present / total) * 100).toFixed(2)) : 100.0;
+      
+      enrolled.push({
+        ...row,
+        present_classes: present,
+        total_classes: total,
+        attendance_percent: pct
+      });
+    }
+    
+    return res.json(enrolled);
+  } catch (err) {
+    console.error('getEnrolledCourses error', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.getDetailedAttendance = async (req, res) => {
+  const studentID = req.user && req.user.referenceID;
+  if (!studentID) return res.status(400).json({ message: 'studentID required' });
+
+  const sql = `
+    SELECT ar.attendance_id, ar.lecture_number, ar.attendance_date, ar.status, c.course_code, c.course_title
+      FROM attendance_records ar
+      JOIN enrollments e ON ar.enrollment_id = e.enrollment_id
+      JOIN sections sec ON e.section_id = sec.section_id
+      JOIN courses c ON sec.course_id = c.course_id
+     WHERE e.student_id = :id
+     ORDER BY ar.attendance_date DESC
+  `;
+  try {
+    const result = await oracle.execute(sql, { id: Number(studentID) }, { outFormat: oracledb.OUT_FORMAT_OBJECT });
+    return res.json(result.rows);
+  } catch (err) {
+    console.error('getDetailedAttendance error', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.getLibraryBooks = async (req, res) => {
+  try {
+    const sql = `SELECT item_id, title, author, isbn, item_type, total_copies, available_copies, publisher, publish_year, pages FROM library_items ORDER BY title`;
+    const result = await oracle.execute(sql, {}, { outFormat: oracledb.OUT_FORMAT_OBJECT });
+    return res.json(result.rows);
+  } catch (err) {
+    console.error('student getLibraryBooks error', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.getMyLibraryIssues = async (req, res) => {
+  const studentID = req.user && req.user.referenceID;
+  if (!studentID) return res.status(400).json({ message: 'studentID required' });
+
+  try {
+    const sql = `
+      SELECT li.issue_id, li.item_id, b.title, b.author, li.issue_date, li.due_date, li.return_date, li.fine_amount, li.status
+      FROM library_issues li
+      JOIN library_items b ON li.item_id = b.item_id
+      WHERE li.student_id = :id
+      ORDER BY li.issue_date DESC
+    `;
+    const result = await oracle.execute(sql, { id: Number(studentID) }, { outFormat: oracledb.OUT_FORMAT_OBJECT });
+    return res.json(result.rows);
+  } catch (err) {
+    console.error('getMyLibraryIssues error', err);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 };

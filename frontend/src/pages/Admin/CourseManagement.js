@@ -8,6 +8,7 @@ const CourseManagement = () => {
   const [students, setStudents] = useState([]);
   const [faculties, setFaculties] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [programs, setPrograms] = useState([]);
   
   const [activeTab, setActiveTab] = useState('courses');
   const [loading, setLoading] = useState(true);
@@ -24,16 +25,26 @@ const CourseManagement = () => {
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [enrollForm, setEnrollForm] = useState({ studentID: '', sectionID: '' });
 
+  // Dept & Prog Modal triggers
+  const [showDeptModal, setShowDeptModal] = useState(false);
+  const [deptEditMode, setDeptEditMode] = useState(false);
+  const [deptForm, setDeptForm] = useState({ id: '', name: '', code: '' });
+
+  const [showProgModal, setShowProgModal] = useState(false);
+  const [progEditMode, setProgEditMode] = useState(false);
+  const [progForm, setProgForm] = useState({ id: '', name: '', departmentID: '', durationSemesters: 8 });
+
   const loadAllData = async () => {
     setLoading(true);
     try {
-      const [resC, resS, resE, resSt, resF, resD] = await Promise.all([
+      const [resC, resS, resE, resSt, resF, resD, resP] = await Promise.all([
         api.get('/admin/courses'),
         api.get('/admin/sections'),
         api.get('/admin/enrollments'),
         api.get('/admin/students'),
         api.get('/admin/faculties'),
-        api.get('/admin/departments')
+        api.get('/admin/departments'),
+        api.get('/admin/programs')
       ]);
       setCourses(resC.data || []);
       setSections(resS.data || []);
@@ -41,6 +52,7 @@ const CourseManagement = () => {
       setStudents(resSt.data || []);
       setFaculties(resF.data || []);
       setDepartments(resD.data || []);
+      setPrograms(resP.data || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -195,6 +207,92 @@ const CourseManagement = () => {
     }
   };
 
+  // --- Department handlers ---
+  const handleOpenAddDept = () => {
+    setDeptEditMode(false);
+    setDeptForm({ id: '', name: '', code: '' });
+    setShowDeptModal(true);
+  };
+  const handleOpenEditDept = (d) => {
+    setDeptEditMode(true);
+    setDeptForm({ id: d.DEPT_ID, name: d.DEPT_NAME, code: d.DEPT_CODE });
+    setShowDeptModal(true);
+  };
+  const handleDeptSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (deptEditMode) {
+        await api.put(`/admin/departments/${deptForm.id}`, { name: deptForm.name, code: deptForm.code });
+        alert('Department successfully updated.');
+      } else {
+        await api.post('/admin/departments', { name: deptForm.name, code: deptForm.code });
+        alert('Department successfully created.');
+      }
+      setShowDeptModal(false);
+      loadAllData();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Operation failed');
+    }
+  };
+  const handleDeleteDept = async (id) => {
+    if (window.confirm('Delete this department? This will delete all associated programs and courses!')) {
+      try {
+        await api.delete(`/admin/departments/${id}`);
+        alert('Department deleted.');
+        loadAllData();
+      } catch (err) {
+        alert(err.response?.data?.message || 'Failed to delete department');
+      }
+    }
+  };
+
+  // --- Program handlers ---
+  const handleOpenAddProg = (deptId) => {
+    setProgEditMode(false);
+    setProgForm({ id: '', name: '', departmentID: deptId || departments[0]?.DEPT_ID || '', durationSemesters: 8 });
+    setShowProgModal(true);
+  };
+  const handleOpenEditProg = (p) => {
+    setProgEditMode(true);
+    setProgForm({ id: p.PROGRAM_ID, name: p.PROGRAM_NAME, departmentID: p.DEPARTMENT_ID, durationSemesters: p.DURATION_SEMESTERS });
+    setShowProgModal(true);
+  };
+  const handleProgSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (progEditMode) {
+        await api.put(`/admin/programs/${progForm.id}`, {
+          name: progForm.name,
+          departmentID: progForm.departmentID,
+          durationSemesters: progForm.durationSemesters
+        });
+        alert('Program successfully updated.');
+      } else {
+        await api.post('/admin/programs', {
+          name: progForm.name,
+          departmentID: progForm.departmentID,
+          durationSemesters: progForm.durationSemesters
+        });
+        alert('Program successfully created.');
+      }
+      setShowProgModal(false);
+      loadAllData();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Operation failed');
+    }
+  };
+  const handleDeleteProg = async (id) => {
+    if (window.confirm('Delete this program? This will set associated student programs to null.')) {
+      try {
+        await api.delete(`/admin/programs/${id}`);
+        alert('Program deleted.');
+        loadAllData();
+      } catch (err) {
+        alert(err.response?.data?.message || 'Failed to delete program');
+      }
+    }
+  };
+
   return (
     <div className="container mt-4 pb-5 text-start">
       <div className="mb-4">
@@ -207,6 +305,7 @@ const CourseManagement = () => {
         <button className={`btn py-2 px-4 border-0 rounded-0 ${activeTab === 'courses' ? 'btn-glass text-white' : 'btn-glass-secondary text-secondary'}`} onClick={() => setActiveTab('courses')}>Courses Catalog</button>
         <button className={`btn py-2 px-4 border-0 rounded-0 ${activeTab === 'sections' ? 'btn-glass text-white' : 'btn-glass-secondary text-secondary'}`} onClick={() => setActiveTab('sections')}>Class Sections</button>
         <button className={`btn py-2 px-4 border-0 rounded-0 ${activeTab === 'enrollments' ? 'btn-glass text-white' : 'btn-glass-secondary text-secondary'}`} onClick={() => setActiveTab('enrollments')}>Student Enrollments</button>
+        <button className={`btn py-2 px-4 border-0 rounded-0 ${activeTab === 'departments' ? 'btn-glass text-white' : 'btn-glass-secondary text-secondary'}`} onClick={() => setActiveTab('departments')}>Departments & Programs</button>
       </div>
 
       {loading ? (
@@ -356,6 +455,79 @@ const CourseManagement = () => {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* --- TAB 4: DEPARTMENTS & PROGRAMS --- */}
+          {activeTab === 'departments' && (
+            <div>
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h5 className="fw-semibold text-white mb-0">Total Departments: {departments.length}</h5>
+                <button className="btn btn-glass btn-sm" onClick={handleOpenAddDept}>+ Add Department</button>
+              </div>
+              <div className="row gy-4">
+                {departments.map(d => {
+                  const deptPrograms = programs.filter(p => Number(p.DEPARTMENT_ID) === Number(d.DEPT_ID));
+                  const deptCourses = courses.filter(c => Number(c.DEPARTMENT_ID) === Number(d.DEPT_ID));
+
+                  return (
+                    <div key={d.DEPT_ID} className="col-12 col-lg-6">
+                      <div className="glass-card p-4">
+                        <div className="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-white-5">
+                          <div>
+                            <h5 className="fw-bold text-white mb-0">{d.DEPT_NAME}</h5>
+                            <span className="badge-glass badge-glass-info mt-1">{d.DEPT_CODE}</span>
+                          </div>
+                          <div className="d-flex gap-2">
+                            <button className="btn btn-glass-secondary btn-sm py-1 px-2 text-warning" onClick={() => handleOpenEditDept(d)}>Edit</button>
+                            <button className="btn btn-glass-secondary btn-sm py-1 px-2 text-danger" onClick={() => handleDeleteDept(d.DEPT_ID)}>Delete</button>
+                          </div>
+                        </div>
+
+                        {/* Programs Section */}
+                        <div className="mb-4">
+                          <div className="d-flex justify-content-between align-items-center mb-2">
+                            <span className="text-secondary small fw-bold uppercase">Programs offered ({deptPrograms.length})</span>
+                            <button className="btn btn-link text-info p-0 text-decoration-none small" style={{ fontSize: '0.8rem' }} onClick={() => handleOpenAddProg(d.DEPT_ID)}>+ Add Program</button>
+                          </div>
+                          {deptPrograms.length === 0 ? (
+                            <p className="text-secondary small italic mb-0">No programs registered yet.</p>
+                          ) : (
+                            <ul className="list-group list-group-flush bg-transparent">
+                              {deptPrograms.map(p => (
+                                <li key={p.PROGRAM_ID} className="list-group-item bg-transparent border-0 px-0 py-2 d-flex justify-content-between align-items-center">
+                                  <span className="text-light small fw-medium">{p.PROGRAM_NAME} ({p.DURATION_SEMESTERS} Semesters)</span>
+                                  <div className="d-flex gap-2">
+                                    <button className="btn btn-link text-warning p-0 text-decoration-none small" style={{ fontSize: '0.75rem' }} onClick={() => handleOpenEditProg(p)}>Edit</button>
+                                    <button className="btn btn-link text-danger p-0 text-decoration-none small" style={{ fontSize: '0.75rem' }} onClick={() => handleDeleteProg(p.PROGRAM_ID)}>Delete</button>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+
+                        {/* Courses Section */}
+                        <div>
+                          <span className="text-secondary small fw-bold uppercase d-block mb-2">Courses offered ({deptCourses.length})</span>
+                          {deptCourses.length === 0 ? (
+                            <p className="text-secondary small italic mb-0">No courses offered in catalog.</p>
+                          ) : (
+                            <div className="d-flex flex-wrap gap-2">
+                              {deptCourses.map(c => (
+                                <span key={c.COURSE_ID} className="badge-glass badge-glass-secondary py-1 px-2" style={{ fontSize: '0.75rem' }} title={c.COURSE_TITLE}>
+                                  <strong>{c.COURSE_CODE}</strong> ({c.CREDIT_HOURS} CH)
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -524,6 +696,76 @@ const CourseManagement = () => {
                 <div className="modal-footer modal-glass-footer">
                   <button type="button" className="btn btn-glass-secondary" onClick={() => setShowEnrollModal(false)}>Cancel</button>
                   <button type="submit" className="btn btn-glass">Enroll Student</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- ADD/EDIT DEPARTMENT MODAL --- */}
+      {showDeptModal && (
+        <div className="modal d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content modal-glass">
+              <div className="modal-header modal-glass-header">
+                <h5 className="modal-title fw-bold">{deptEditMode ? 'Update Department' : 'Create Department'}</h5>
+                <button type="button" className="btn-close btn-close-white" onClick={() => setShowDeptModal(false)}></button>
+              </div>
+              <form onSubmit={handleDeptSubmit}>
+                <div className="modal-body">
+                  <div className="row g-3">
+                    <div className="col-12">
+                      <label className="form-label text-secondary small">Department Name</label>
+                      <input type="text" placeholder="e.g. Electrical Engineering" required className="form-control form-glass-control" value={deptForm.name} onChange={e => setDeptForm({...deptForm, name: e.target.value})} />
+                    </div>
+                    <div className="col-12">
+                      <label className="form-label text-secondary small">Department Code</label>
+                      <input type="text" placeholder="e.g. EE" required className="form-control form-glass-control" value={deptForm.code} onChange={e => setDeptForm({...deptForm, code: e.target.value})} />
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer modal-glass-footer">
+                  <button type="button" className="btn btn-glass-secondary" onClick={() => setShowDeptModal(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-glass">{deptEditMode ? 'Save Changes' : 'Create'}</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- ADD/EDIT PROGRAM MODAL --- */}
+      {showProgModal && (
+        <div className="modal d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content modal-glass">
+              <div className="modal-header modal-glass-header">
+                <h5 className="modal-title fw-bold">{progEditMode ? 'Update Program' : 'Create Program'}</h5>
+                <button type="button" className="btn-close btn-close-white" onClick={() => setShowProgModal(false)}></button>
+              </div>
+              <form onSubmit={handleProgSubmit}>
+                <div className="modal-body">
+                  <div className="row g-3">
+                    <div className="col-12">
+                      <label className="form-label text-secondary small">Program Name</label>
+                      <input type="text" placeholder="e.g. BS Software Engineering" required className="form-control form-glass-control" value={progForm.name} onChange={e => setProgForm({...progForm, name: e.target.value})} />
+                    </div>
+                    <div className="col-12">
+                      <label className="form-label text-secondary small">Academic Department</label>
+                      <select required className="form-select form-glass-control" value={progForm.departmentID} onChange={e => setProgForm({...progForm, departmentID: e.target.value})}>
+                        {departments.map(d => <option key={d.DEPT_ID} value={d.DEPT_ID}>{d.DEPT_NAME}</option>)}
+                      </select>
+                    </div>
+                    <div className="col-12">
+                      <label className="form-label text-secondary small">Duration (Semesters)</label>
+                      <input type="number" required className="form-control form-glass-control" value={progForm.durationSemesters} onChange={e => setProgForm({...progForm, durationSemesters: Number(e.target.value)})} />
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer modal-glass-footer">
+                  <button type="button" className="btn btn-glass-secondary" onClick={() => setShowProgModal(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-glass">{progEditMode ? 'Save Changes' : 'Create'}</button>
                 </div>
               </form>
             </div>

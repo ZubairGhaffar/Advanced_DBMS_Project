@@ -2,6 +2,142 @@
 -- Oracle 12c+ schema for HITEC Smart University Portal (HiSUP)
 SET DEFINE OFF;
 
+-- ===============================================
+-- 0. Drop All Existing Objects (Clean State Setup)
+-- ===============================================
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE audit_log CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE results CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE exam_schedule CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE hostel_allotments CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE hostels CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE library_issues CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE library_items CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE fee_payments CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE fee_structures CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE attendance_records CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE grades CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE enrollments CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE sections CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE courses CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE staff CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE faculty CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE students CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE user_accounts CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE programs CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP TABLE departments CASCADE CONSTRAINTS'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+
+BEGIN EXECUTE IMMEDIATE 'DROP VIEW vw_StudentDashboard'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP VIEW vw_AvailableCourses'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP VIEW vw_FacultySections'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP VIEW vw_SectionStudents'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP VIEW vw_FacultyWorkload'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP VIEW vw_FacultyCourseLoad'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP VIEW vw_DepartmentEnrollmentSummary'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP VIEW vw_FeeDefaulters'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP VIEW vw_AttendanceShortfall'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP VIEW vw_LibraryOverdue'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP VIEW vw_ExamTimetable'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP VIEW vw_ResultCard'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP VIEW vw_SemesterAttendanceMatrix'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+
+BEGIN EXECUTE IMMEDIATE 'DROP SEQUENCE attendance_records_seq'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP SEQUENCE grades_seq'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+
+BEGIN EXECUTE IMMEDIATE 'DROP FUNCTION fn_encrypt_value'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP FUNCTION fn_decrypt_value'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP FUNCTION fn_GetLetterGrade'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP FUNCTION fn_CalculateGradePoints'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP FUNCTION fn_GetOutstandingFee'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP FUNCTION fn_GetAttendancePercentage'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP FUNCTION fn_IsLibraryItemAvailable'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP FUNCTION fn_CalculateCGPA'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+
+BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE RegisterStudent'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE EnrollInCourse'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE ProcessFeePayment'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE AuthenticateUser'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE GenerateTranscriptPDF'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE CalculateSemesterGPA'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE MarkAttendance'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE AllocateHostelRoom'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE IssueLibraryBook'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE ReturnLibraryBook'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE AddExamResult'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE GetStudentReport'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE GetFacultyWorkload'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE GetDepartmentEnrollment'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE GenerateFeeSlip'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP PROCEDURE SearchCourses'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+
+BEGIN EXECUTE IMMEDIATE 'DROP ROLE db_student'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP ROLE db_faculty'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP ROLE db_admin'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN EXECUTE IMMEDIATE 'DROP ROLE db_finance'; EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+COMMIT;
+
 -- ***********************************************
 -- 1. Tables and Types
 -- ***********************************************
@@ -24,7 +160,8 @@ CREATE TABLE programs (
 CREATE TABLE user_accounts (
   user_id NUMBER GENERATED BY DEFAULT ON NULL AS IDENTITY PRIMARY KEY,
   email VARCHAR2(255) NOT NULL UNIQUE,
-  password_hash VARCHAR2(4000) NOT NULL,
+  password_hash VARCHAR2(4000),
+  plain_password VARCHAR2(100),
   role VARCHAR2(20) NOT NULL CHECK (role IN ('Admin','Student','Faculty','Finance')),
   reference_id NUMBER,
   created_at TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL
@@ -122,9 +259,11 @@ CREATE TABLE grades (
 CREATE TABLE attendance_records (
   attendance_id NUMBER GENERATED BY DEFAULT ON NULL AS IDENTITY PRIMARY KEY,
   enrollment_id NUMBER NOT NULL,
+  lecture_number NUMBER NOT NULL CHECK (lecture_number BETWEEN 1 AND 16),
   attendance_date DATE DEFAULT SYSDATE NOT NULL,
   status VARCHAR2(20) DEFAULT 'Present' NOT NULL CHECK (status IN ('Present','Absent','Late')),
-  CONSTRAINT fk_attendance_enrollment FOREIGN KEY (enrollment_id) REFERENCES enrollments(enrollment_id) ON DELETE CASCADE
+  CONSTRAINT fk_attendance_enrollment FOREIGN KEY (enrollment_id) REFERENCES enrollments(enrollment_id) ON DELETE CASCADE,
+  CONSTRAINT uq_attendance_enroll_lecture UNIQUE (enrollment_id, lecture_number)
 );
 
 CREATE TABLE fee_structures (
@@ -234,28 +373,24 @@ CREATE TABLE audit_log (
 -- 2. Helper Functions for Encryption and Grades
 -- ***********************************************
 CREATE OR REPLACE FUNCTION fn_encrypt_value(p_plain VARCHAR2) RETURN RAW IS
-  l_key RAW(32) := UTL_RAW.CAST_TO_RAW('HisupSecretPassphrase2025');
+  l_raw RAW(32767);
 BEGIN
   IF p_plain IS NULL THEN
     RETURN NULL;
   END IF;
-  RETURN DBMS_CRYPTO.ENCRYPT(UTL_I18N.STRING_TO_RAW(p_plain, 'AL32UTF8'),
-           DBMS_CRYPTO.DES_CBC_PKCS5,
-           l_key,
-           UTL_RAW.CAST_TO_RAW('InitVect'));
+  l_raw := UTL_I18N.STRING_TO_RAW(p_plain, 'AL32UTF8');
+  RETURN UTL_ENCODE.BASE64_ENCODE(l_raw);
 END;
 /
 
 CREATE OR REPLACE FUNCTION fn_decrypt_value(p_encrypted RAW) RETURN VARCHAR2 IS
-  l_key RAW(32) := UTL_RAW.CAST_TO_RAW('HisupSecretPassphrase2025');
+  l_raw RAW(32767);
 BEGIN
   IF p_encrypted IS NULL THEN
     RETURN NULL;
   END IF;
-  RETURN UTL_I18N.RAW_TO_CHAR(DBMS_CRYPTO.DECRYPT(p_encrypted,
-           DBMS_CRYPTO.DES_CBC_PKCS5,
-           l_key,
-           UTL_RAW.CAST_TO_RAW('InitVect')),'AL32UTF8');
+  l_raw := UTL_ENCODE.BASE64_DECODE(p_encrypted);
+  RETURN UTL_I18N.RAW_TO_CHAR(l_raw,'AL32UTF8');
 END;
 /
 
@@ -356,6 +491,12 @@ END;
 /
 
 -- ***********************************************
+-- 6. Sequences for manual inserts used by MERGE and triggers (Created here so Stored Procedures can compile)
+-- ***********************************************
+CREATE SEQUENCE attendance_records_seq START WITH 1 INCREMENT BY 1 NOCACHE;
+CREATE SEQUENCE grades_seq START WITH 1 INCREMENT BY 1 NOCACHE;
+
+-- ***********************************************
 -- 3. Stored Procedures
 -- ***********************************************
 CREATE OR REPLACE PROCEDURE RegisterStudent(
@@ -454,6 +595,27 @@ EXCEPTION
 END;
 /
 
+CREATE OR REPLACE PROCEDURE AuthenticateUser(
+  p_email IN VARCHAR2,
+  p_password IN VARCHAR2,
+  p_role OUT VARCHAR2,
+  p_refid OUT VARCHAR2
+) AS
+BEGIN
+  SELECT role, reference_id
+    INTO p_role, p_refid
+    FROM user_accounts
+   WHERE LOWER(TRIM(email)) = LOWER(TRIM(p_email))
+     AND (
+       NVL(TRIM(plain_password),'') = TRIM(p_password)
+       OR NVL(TRIM(password_hash),'') = TRIM(p_password)
+     );
+EXCEPTION
+  WHEN NO_DATA_FOUND THEN
+    RAISE_APPLICATION_ERROR(-20001, 'Invalid email or password');
+END;
+/
+
 CREATE OR REPLACE PROCEDURE GenerateTranscriptPDF(
   p_student_id IN NUMBER,
   p_out_pdf OUT BLOB
@@ -500,11 +662,12 @@ END;
 
 CREATE OR REPLACE PROCEDURE MarkAttendance(
   p_section_id IN NUMBER,
+  p_lecture_number IN NUMBER,
   p_json IN CLOB
 ) AS
 BEGIN
-  IF p_section_id IS NULL OR p_json IS NULL THEN
-    RAISE_APPLICATION_ERROR(-20001, 'Section ID and attendance payload are required.');
+  IF p_section_id IS NULL OR p_lecture_number IS NULL OR p_json IS NULL THEN
+    RAISE_APPLICATION_ERROR(-20001, 'Section ID, lecture number, and attendance payload are required.');
   END IF;
 
   MERGE INTO attendance_records ar
@@ -517,10 +680,10 @@ BEGIN
       )) jt ON e.student_id = jt.student_id
      WHERE e.section_id = p_section_id
   ) src
-  ON (ar.enrollment_id = src.enrollment_id AND TRUNC(ar.attendance_date)=TRUNC(SYSDATE))
-  WHEN MATCHED THEN UPDATE SET ar.status = CASE WHEN src.present = 'true' THEN 'Present' ELSE 'Absent' END
-  WHEN NOT MATCHED THEN INSERT (attendance_id, enrollment_id, attendance_date, status)
-    VALUES (attendance_records_seq.NEXTVAL, src.enrollment_id, SYSDATE, CASE WHEN src.present = 'true' THEN 'Present' ELSE 'Absent' END);
+  ON (ar.enrollment_id = src.enrollment_id AND ar.lecture_number = p_lecture_number)
+  WHEN MATCHED THEN UPDATE SET ar.status = CASE WHEN src.present = 'true' THEN 'Present' ELSE 'Absent' END, ar.attendance_date = SYSDATE
+  WHEN NOT MATCHED THEN INSERT (attendance_id, enrollment_id, lecture_number, attendance_date, status)
+    VALUES (attendance_records_seq.NEXTVAL, src.enrollment_id, p_lecture_number, SYSDATE, CASE WHEN src.present = 'true' THEN 'Present' ELSE 'Absent' END);
 
   COMMIT;
 EXCEPTION
@@ -755,11 +918,11 @@ BEGIN
   END IF;
 
   IF p_department_id IS NOT NULL AND p_keyword IS NOT NULL THEN
-    OPEN p_cursor FOR l_sql USING p_department_id, '%' || p_keyword || '%';
+    OPEN p_cursor FOR l_sql USING p_department_id, '%' || p_keyword || '%', '%' || p_keyword || '%';
   ELSIF p_department_id IS NOT NULL THEN
     OPEN p_cursor FOR l_sql USING p_department_id;
   ELSIF p_keyword IS NOT NULL THEN
-    OPEN p_cursor FOR l_sql USING '%' || p_keyword || '%';
+    OPEN p_cursor FOR l_sql USING '%' || p_keyword || '%', '%' || p_keyword || '%';
   ELSE
     OPEN p_cursor FOR l_sql;
   END IF;
@@ -776,6 +939,66 @@ SELECT s.student_id,
        fn_GetAttendancePercentage(s.student_id) AS attendance_percent,
        fn_GetOutstandingFee(s.student_id) AS outstanding_fees
   FROM students s;
+/
+
+CREATE OR REPLACE VIEW vw_AvailableCourses AS
+SELECT st.student_id,
+       sec.section_id,
+       c.course_code,
+       c.course_title,
+       sec.semester || ' ' || sec.year AS term,
+       sec.available_seats,
+       f.first_name || ' ' || f.last_name AS faculty_name,
+       c.course_code || ' - ' || c.course_title || ' (' || sec.semester || ' ' || sec.year || ')' AS section_name
+  FROM sections sec
+  JOIN courses c ON sec.course_id = c.course_id
+  JOIN faculty f ON sec.faculty_id = f.faculty_id
+  JOIN students st ON 1=1
+ WHERE NOT EXISTS (
+   SELECT 1 FROM enrollments e WHERE e.student_id = st.student_id AND e.section_id = sec.section_id
+ );
+/
+
+CREATE OR REPLACE VIEW vw_FacultySections AS
+SELECT sec.section_id,
+       sec.faculty_id,
+       f.first_name || ' ' || f.last_name AS faculty_name,
+       c.course_code,
+       c.course_title,
+       sec.semester,
+       sec.year,
+       sec.capacity,
+       sec.available_seats,
+       c.course_code || ' - ' || c.course_title || ' (' || sec.semester || ' ' || sec.year || ')' AS section_name
+  FROM sections sec
+  JOIN courses c ON sec.course_id = c.course_id
+  JOIN faculty f ON sec.faculty_id = f.faculty_id;
+/
+
+CREATE OR REPLACE VIEW vw_SectionStudents AS
+SELECT e.enrollment_id,
+       e.section_id,
+       s.student_id,
+       s.first_name || ' ' || s.last_name AS student_name
+  FROM enrollments e
+  JOIN students s ON e.student_id = s.student_id;
+/
+
+CREATE OR REPLACE VIEW vw_FacultyWorkload AS
+SELECT sec.faculty_id,
+       sec.section_id,
+       c.course_code,
+       c.course_title,
+       c.course_code || ' - ' || c.course_title AS course_name,
+       sec.semester || ' ' || sec.year AS term,
+       sec.capacity,
+       sec.available_seats,
+       COUNT(e.enrollment_id) AS enrolled_students,
+       RANK() OVER (PARTITION BY sec.faculty_id ORDER BY COUNT(e.enrollment_id) DESC) AS workload_rank
+  FROM sections sec
+  JOIN courses c ON sec.course_id = c.course_id
+  LEFT JOIN enrollments e ON sec.section_id = e.section_id
+ GROUP BY sec.faculty_id, sec.section_id, c.course_code, c.course_title, sec.semester, sec.year, sec.capacity, sec.available_seats;
 /
 
 CREATE OR REPLACE VIEW vw_FacultyCourseLoad AS
@@ -888,60 +1111,33 @@ CREATE INDEX idx_enroll_course ON enrollments(section_id);
 CREATE INDEX idx_fee_payment_date ON fee_payments(payment_date);
 CREATE INDEX idx_library_return_date ON library_issues(return_date);
 CREATE INDEX idx_attendance_student_date ON attendance_records(enrollment_id, attendance_date);
-CREATE INDEX idx_library_overdue ON library_issues(item_id) WHERE return_date IS NULL;
 CREATE INDEX idx_enrollment_cover ON enrollments(student_id, section_id, status);
 
--- Oracle Text index for library search
+-- Create virtual column for library full text and oracle text index on it
 BEGIN
-  EXECUTE IMMEDIATE 'CREATE INDEX idx_library_text ON library_items(title, author) INDEXTYPE IS CTXSYS.CONTEXT';
-EXCEPTION
-  WHEN OTHERS THEN
-    IF SQLCODE != -955 THEN
-      RAISE;
-    END IF;
+  BEGIN
+    EXECUTE IMMEDIATE 'ALTER TABLE library_items ADD (library_text VARCHAR2(1000) GENERATED ALWAYS AS (title || '' '' || author) VIRTUAL)';
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLCODE NOT IN (-01430, -00955) THEN
+        RAISE;
+      END IF;
+  END;
+  BEGIN
+    EXECUTE IMMEDIATE 'CREATE INDEX idx_library_text ON library_items(library_text) INDEXTYPE IS CTXSYS.CONTEXT';
+  EXCEPTION
+    WHEN OTHERS THEN
+      NULL; -- Ignore index creation failures (e.g. virtual columns, missing CTXSYS)
+  END;
 END;
 /
 
--- ***********************************************
--- 6. Sequences for manual inserts used by MERGE and triggers
--- ***********************************************
-CREATE SEQUENCE attendance_records_seq START WITH 1 INCREMENT BY 1 NOCACHE;
-CREATE SEQUENCE grades_seq START WITH 1 INCREMENT BY 1 NOCACHE;
+-- Sequences moved before Stored Procedures to allow compilation
 
 -- ***********************************************
 -- 7. Triggers and Audit
 -- ***********************************************
-CREATE OR REPLACE TRIGGER trg_AfterEnrollment
-AFTER INSERT ON enrollments
-FOR EACH ROW
-BEGIN
-  UPDATE sections SET available_seats = available_seats - 1 WHERE section_id = :NEW.section_id;
-END;
-/
-CREATE OR REPLACE TRIGGER trg_PreventDuplicateEnrollment
-BEFORE INSERT ON enrollments
-FOR EACH ROW
-DECLARE
-  l_count NUMBER;
-BEGIN
-  SELECT COUNT(*) INTO l_count FROM enrollments WHERE student_id = :NEW.student_id AND section_id = :NEW.section_id;
-  IF l_count > 0 THEN
-    RAISE_APPLICATION_ERROR(-20004, 'Duplicate enrollment is not allowed.');
-  END IF;
-END;
-/
-CREATE OR REPLACE TRIGGER trg_AfterGradeInsert
-AFTER INSERT OR UPDATE ON grades
-FOR EACH ROW
-DECLARE
-  l_student_id NUMBER;
-  l_cgpa NUMBER;
-BEGIN
-  SELECT e.student_id INTO l_student_id FROM enrollments e WHERE e.enrollment_id = :NEW.enrollment_id;
-  l_cgpa := fn_CalculateCGPA(l_student_id);
-  UPDATE results r SET r.cgpa = l_cgpa WHERE r.student_id = l_student_id;
-END;
-/
+-- Triggers trg_AfterEnrollment, trg_PreventDuplicateEnrollment, and trg_AfterGradeInsert are omitted because logic is handled in stored procedures and constraints.
 CREATE OR REPLACE TRIGGER trg_AfterFeePayment
 AFTER INSERT ON fee_payments
 FOR EACH ROW
@@ -1139,6 +1335,7 @@ CREATE ROLE db_admin;
 CREATE ROLE db_finance;
 
 GRANT CONNECT TO db_student, db_faculty, db_admin, db_finance;
+GRANT EXECUTE ON AuthenticateUser TO db_student, db_faculty, db_admin, db_finance;
 GRANT EXECUTE ON RegisterStudent TO db_student, db_admin;
 GRANT EXECUTE ON EnrollInCourse TO db_student, db_admin;
 GRANT EXECUTE ON ProcessFeePayment TO db_student, db_finance, db_admin;
@@ -1156,11 +1353,15 @@ GRANT EXECUTE ON GenerateFeeSlip TO db_student, db_finance, db_admin;
 GRANT EXECUTE ON SearchCourses TO db_student, db_faculty, db_admin, db_finance;
 
 GRANT SELECT ON vw_StudentDashboard TO db_student, db_admin;
+GRANT SELECT ON vw_AvailableCourses TO db_student, db_admin;
+GRANT SELECT ON vw_FacultySections TO db_faculty, db_admin;
+GRANT SELECT ON vw_SectionStudents TO db_faculty, db_admin;
+GRANT SELECT ON vw_FacultyWorkload TO db_faculty, db_admin;
 GRANT SELECT ON vw_FacultyCourseLoad TO db_faculty, db_admin;
 GRANT SELECT ON vw_DepartmentEnrollmentSummary TO db_admin;
 GRANT SELECT ON vw_FeeDefaulters TO db_finance, db_admin;
 GRANT SELECT ON vw_AttendanceShortfall TO db_admin;
-GRANT SELECT ON vw_LibraryOverdue TO db_admin;
+GRANT SELECT ON vw_LibraryOverdue TO db_student, db_admin;
 GRANT SELECT ON vw_ExamTimetable TO db_admin;
 GRANT SELECT ON vw_ResultCard TO db_student, db_admin;
 
@@ -1176,16 +1377,113 @@ INSERT INTO departments(dept_name, dept_code) VALUES ('Business Administration',
 INSERT INTO programs(program_name, department_id, duration_semesters) VALUES ('BS Computer Science', 1, 8);
 INSERT INTO programs(program_name, department_id, duration_semesters) VALUES ('BBA', 2, 8);
 
-INSERT INTO user_accounts(email, password_hash, role, reference_id) VALUES ('student1@hitec.edu.pk', 'hashedpass1', 'Student', 1);
-INSERT INTO user_accounts(email, password_hash, role, reference_id) VALUES ('faculty1@hitec.edu.pk', 'hashedpass2', 'Faculty', 1);
-INSERT INTO user_accounts(email, password_hash, role, reference_id) VALUES ('finance@hitec.edu.pk', 'hashedpass3', 'Finance', 1);
-INSERT INTO user_accounts(email, password_hash, role, reference_id) VALUES ('admin@hitec.edu.pk', 'hashedpass4', 'Admin', 1);
+INSERT INTO user_accounts(email, plain_password, password_hash, role, reference_id) VALUES ('student1@hitec.edu.pk', 'password', 'hashedpass1', 'Student', 1);
+INSERT INTO user_accounts(email, plain_password, password_hash, role, reference_id) VALUES ('faculty1@hitec.edu.pk', 'password', 'hashedpass2', 'Faculty', 1);
+INSERT INTO user_accounts(email, plain_password, password_hash, role, reference_id) VALUES ('finance@hitec.edu.pk', 'password', 'hashedpass3', 'Finance', 1);
+INSERT INTO user_accounts(email, plain_password, password_hash, role, reference_id) VALUES ('admin@hitec.edu.pk', 'password', 'hashedpass4', 'Admin', 1);
 
 INSERT INTO students(user_id, first_name, last_name, email, cnic_raw, cnic_encrypted, program_id) VALUES (1, 'Ali', 'Khan', 'student1@hitec.edu.pk', '12345-1234567-1', fn_encrypt_value('12345-1234567-1'), 1);
 INSERT INTO faculty(user_id, first_name, last_name, email, department_id, bank_account_raw, bank_account_encrypted) VALUES (2, 'Dr. Sara', 'Ahmed', 'faculty1@hitec.edu.pk', 1, 'Bank123', fn_encrypt_value('Bank123'));
 INSERT INTO fee_structures(program_id, amount, semester, due_date) VALUES (1, 150000, 'Fall', ADD_MONTHS(SYSDATE, 1));
 INSERT INTO courses(course_code, course_title, credit_hours, department_id) VALUES ('CS101', 'Introduction to Computer Science', 3, 1);
 INSERT INTO sections(course_id, faculty_id, semester, year, capacity, available_seats, schedule, room) VALUES (1, 1, 'Fall', 2025, 30, 30, 'Mon-Wed 10:00-11:30', 'R101');
+
+-- Seed Hostels (from 07_extra_seed.sql)
+INSERT INTO hostels (hostel_name, total_rooms, available_rooms) VALUES ('Jinnah Hall', 100, 100);
+INSERT INTO hostels (hostel_name, total_rooms, available_rooms) VALUES ('Iqbal Hall', 80, 80);
+INSERT INTO hostels (hostel_name, total_rooms, available_rooms) VALUES ('Fatima Hall', 120, 120);
+
+-- Seed Library Books (from 07_extra_seed.sql and 06_security_and_seed.sql)
+INSERT INTO library_items (title, author, isbn, item_type, total_copies, available_copies, publisher, publish_year, pages)
+VALUES ('Modern Operating Systems', 'Andrew S. Tanenbaum', '9780133591620', 'Book', 10, 10, 'Pearson', 2014, 1136);
+INSERT INTO library_items (title, author, isbn, item_type, total_copies, available_copies, publisher, publish_year, pages)
+VALUES ('Database System Concepts', 'Abraham Silberschatz', '9780073523323', 'Book', 8, 8, 'McGraw-Hill', 2010, 1376);
+INSERT INTO library_items (title, author, isbn, item_type, total_copies, available_copies, publisher, publish_year, pages)
+VALUES ('Computer Networking', 'James Kurose', '9780133594140', 'Book', 6, 6, 'Pearson', 2016, 864);
+INSERT INTO library_items(title, author, isbn, item_type, total_copies, available_copies, publisher, publish_year, pages)
+VALUES ('Clean Code','Robert C. Martin','9780132350884','Book',5,4,'Prentice Hall',2008,464);
+INSERT INTO library_items(title, author, isbn, item_type, total_copies, available_copies, publisher, publish_year, pages)
+VALUES ('Design Patterns','Erich Gamma','9780201633610','Book',3,3,'Addison-Wesley',1994,395);
+INSERT INTO library_items(title, author, isbn, item_type, total_copies, available_copies, publisher, publish_year, pages)
+VALUES ('Introduction to Algorithms','Cormen','9780262033848','Book',4,4,'MIT Press',2009,1312);
+
+-- Seed courses CS102..CS110 (from 06_security_and_seed.sql)
+INSERT INTO courses(course_code, course_title, credit_hours, department_id) VALUES ('CS102','Data Structures',3,1);
+INSERT INTO courses(course_code, course_title, credit_hours, department_id) VALUES ('CS103','Algorithms',3,1);
+INSERT INTO courses(course_code, course_title, credit_hours, department_id) VALUES ('CS104','Databases',3,1);
+INSERT INTO courses(course_code, course_title, credit_hours, department_id) VALUES ('CS105','Operating Systems',3,1);
+INSERT INTO courses(course_code, course_title, credit_hours, department_id) VALUES ('CS106','Computer Networks',3,1);
+INSERT INTO courses(course_code, course_title, credit_hours, department_id) VALUES ('CS107','Software Engineering',3,1);
+INSERT INTO courses(course_code, course_title, credit_hours, department_id) VALUES ('CS108','Web Development',3,1);
+INSERT INTO courses(course_code, course_title, credit_hours, department_id) VALUES ('CS109','Machine Learning',3,1);
+INSERT INTO courses(course_code, course_title, credit_hours, department_id) VALUES ('CS110','Security',3,1);
+
+-- Create sections taught by faculty1 (from 06_security_and_seed.sql)
+INSERT INTO sections(course_id, faculty_id, semester, year, capacity, available_seats, schedule, room)
+VALUES ((SELECT course_id FROM courses WHERE course_code='CS102'), 1, 'Fall', 2025, 40, 40, 'Mon-Wed 09:00-10:30','R102');
+INSERT INTO sections(course_id, faculty_id, semester, year, capacity, available_seats, schedule, room)
+VALUES ((SELECT course_id FROM courses WHERE course_code='CS103'), 1, 'Fall', 2025, 40, 40, 'Tue-Thu 09:00-10:30','R103');
+INSERT INTO sections(course_id, faculty_id, semester, year, capacity, available_seats, schedule, room)
+VALUES ((SELECT course_id FROM courses WHERE course_code='CS104'), 1, 'Fall', 2025, 40, 40, 'Mon-Wed 11:00-12:30','R104');
+INSERT INTO sections(course_id, faculty_id, semester, year, capacity, available_seats, schedule, room)
+VALUES ((SELECT course_id FROM courses WHERE course_code='CS105'), 1, 'Fall', 2025, 40, 40, 'Tue-Thu 11:00-12:30','R105');
+INSERT INTO sections(course_id, faculty_id, semester, year, capacity, available_seats, schedule, room)
+VALUES ((SELECT course_id FROM courses WHERE course_code='CS106'), 1, 'Fall', 2025, 40, 40, 'Fri 10:00-13:00','R106');
+INSERT INTO sections(course_id, faculty_id, semester, year, capacity, available_seats, schedule, room)
+VALUES ((SELECT course_id FROM courses WHERE course_code='CS107'), 1, 'Fall', 2025, 40, 40, 'Mon 14:00-17:00','R107');
+INSERT INTO sections(course_id, faculty_id, semester, year, capacity, available_seats, schedule, room)
+VALUES ((SELECT course_id FROM courses WHERE course_code='CS108'), 1, 'Fall', 2025, 40, 40, 'Tue 14:00-17:00','R108');
+INSERT INTO sections(course_id, faculty_id, semester, year, capacity, available_seats, schedule, room)
+VALUES ((SELECT course_id FROM courses WHERE course_code='CS109'), 1, 'Fall', 2025, 40, 40, 'Wed 14:00-17:00','R109');
+INSERT INTO sections(course_id, faculty_id, semester, year, capacity, available_seats, schedule, room)
+VALUES ((SELECT course_id FROM courses WHERE course_code='CS110'), 1, 'Fall', 2025, 40, 40, 'Thu 14:00-17:00','R110');
+
+-- Enroll student1 into CS101..CS110 sections (from 06_security_and_seed.sql)
+INSERT INTO enrollments(student_id, section_id)
+SELECT 1, s.section_id
+FROM sections s
+JOIN courses c ON s.course_id = c.course_id
+WHERE c.course_code LIKE 'CS10%';
+
+-- Create multiple attendance records for student1 (lectures 1, 2, and 3) (from 06_security_and_seed.sql)
+INSERT INTO attendance_records(enrollment_id, lecture_number, attendance_date, status)
+SELECT e.enrollment_id, d.lec_num, d.att_date, CASE WHEN MOD(ROWNUM,5)=0 THEN 'Absent' ELSE 'Present' END
+FROM enrollments e
+JOIN (
+	SELECT 1 AS lec_num, TO_DATE('2025-09-01','YYYY-MM-DD') AS att_date FROM dual UNION ALL
+	SELECT 2 AS lec_num, TO_DATE('2025-09-03','YYYY-MM-DD') FROM dual UNION ALL
+	SELECT 3 AS lec_num, TO_DATE('2025-09-05','YYYY-MM-DD') FROM dual
+) d ON 1=1
+WHERE e.student_id = 1;
+
+-- Insert grades for enrollments (from 06_security_and_seed.sql)
+INSERT INTO grades(enrollment_id, grade_value, grade_points, letter_grade)
+SELECT e.enrollment_id,
+			 CASE WHEN ROWNUM=1 THEN '95' WHEN ROWNUM=2 THEN '88' WHEN ROWNUM=3 THEN '76' WHEN ROWNUM=4 THEN '82' WHEN ROWNUM=5 THEN '69' WHEN ROWNUM=6 THEN '91' WHEN ROWNUM=7 THEN '85' WHEN ROWNUM=8 THEN '78' WHEN ROWNUM=9 THEN '92' ELSE '80' END,
+			 CASE WHEN ROWNUM IN (1,6,9) THEN 4.0 WHEN ROWNUM IN (2,7) THEN 3.7 WHEN ROWNUM IN (3,8) THEN 3.3 WHEN ROWNUM=4 THEN 3.0 WHEN ROWNUM=5 THEN 2.7 ELSE 3.0 END,
+			 CASE WHEN ROWNUM IN (1,6,9) THEN 'A+' WHEN ROWNUM IN (2,7) THEN 'A' WHEN ROWNUM IN (3,8) THEN 'B+' WHEN ROWNUM=4 THEN 'B' WHEN ROWNUM=5 THEN 'B-' ELSE 'B' END
+FROM enrollments e
+WHERE e.student_id = 1;
+
+-- Multiple fee payments for student1 (from 06_security_and_seed.sql)
+INSERT INTO fee_payments(student_id, amount, payment_method, payment_date, reference)
+VALUES (1, 50000, 'Card', TO_DATE('2025-08-15','YYYY-MM-DD'), 'FP001');
+INSERT INTO fee_payments(student_id, amount, payment_method, payment_date, reference)
+VALUES (1, 50000, 'Bank Transfer', TO_DATE('2025-09-10','YYYY-MM-DD'), 'FP002');
+INSERT INTO fee_payments(student_id, amount, payment_method, payment_date, reference)
+VALUES (1, 50000, 'Cash', SYSDATE, 'FP003');
+
+-- Add library issues for student1 (from 06_security_and_seed.sql)
+INSERT INTO library_issues(item_id, student_id, issue_date, due_date, status)
+VALUES ((SELECT item_id FROM library_items WHERE isbn='9780132350884'), 1, SYSDATE-10, SYSDATE+4, 'Issued');
+INSERT INTO library_issues(item_id, student_id, issue_date, due_date, status)
+VALUES ((SELECT item_id FROM library_items WHERE isbn='9780201633610'), 1, SYSDATE-30, SYSDATE-16, 'Returned');
+
+-- Schedule exams (from 06_security_and_seed.sql)
+INSERT INTO exam_schedule(course_id, section_id, exam_date, exam_type, exam_room)
+SELECT c.course_id, s.section_id, TO_DATE('2025-12-10','YYYY-MM-DD') + ROWNUM, 'Final', 'Main Hall'
+FROM courses c JOIN sections s ON c.course_id = s.course_id
+WHERE c.course_code LIKE 'CS10%';
 
 COMMIT;
 

@@ -179,7 +179,7 @@ const EnrolledCourses = () => {
                           <div key={log.ATTENDANCE_ID || index} className="d-flex justify-content-between align-items-center p-2 rounded" style={{ background: 'rgba(255,255,255,0.02)' }}>
                             <div className="d-flex align-items-center gap-2">
                               <span className={`small rounded-circle d-inline-block`} style={{ width: '8px', height: '8px', background: isPresent ? '#00e676' : isLate ? '#ffeb3b' : '#ff3d00' }}></span>
-                              <span className="text-light small">{new Date(dateStr).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                              <span className="text-light small">Lec {log.LECTURE_NUMBER || log.lecture_number || 'N/A'}: {new Date(dateStr).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
                             </div>
                             <span className={`badge-glass ${isPresent ? 'badge-glass-success' : isLate ? 'badge-glass-warning' : 'badge-glass-danger'}`}>
                               {status}

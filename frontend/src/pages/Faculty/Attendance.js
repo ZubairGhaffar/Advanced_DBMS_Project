@@ -4,6 +4,7 @@ import api from '../../api/api';
 const Attendance = () => {
   const [sections, setSections] = useState([]);
   const [selectedSection, setSelectedSection] = useState('');
+  const [selectedLecture, setSelectedLecture] = useState('');
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -20,16 +21,19 @@ const Attendance = () => {
     fetchSections();
   }, []);
 
-  const loadStudents = async (secId) => {
-    if (!secId) {
+  const loadStudents = async (secId, lecNum) => {
+    if (!secId || !lecNum) {
       setStudents([]);
       return;
     }
     setLoading(true);
     try {
-      const res = await api.get(`/faculty/section-students?sectionID=${secId}`);
-      // Default to all present (true)
-      setStudents((res.data || []).map(student => ({ ...student, present: true })));
+      const res = await api.get(`/faculty/section-students?sectionID=${secId}&lectureNumber=${lecNum}`);
+      // Default to present unless explicitly marked absent in DB
+      setStudents((res.data || []).map(student => ({ 
+        ...student, 
+        present: student.ATTENDANCE_STATUS ? (student.ATTENDANCE_STATUS === 'Present') : true 
+      })));
     } catch (err) {
       console.error(err);
     } finally {
@@ -48,15 +52,19 @@ const Attendance = () => {
   };
 
   const handleSubmit = async () => {
-    if (!selectedSection) return;
+    if (!selectedSection || !selectedLecture) return;
     setSubmitting(true);
     const payload = students.map(s => ({ 
       studentID: s.STUDENT_ID || s.student_id, 
-      present: s.present ? 'true' : 'false' // match DB expect 'true'/'false' strings or boolean
+      present: s.present ? 'true' : 'false' // match DB expect 'true'/'false' strings
     }));
     try {
-      await api.post('/faculty/mark-attendance', { sectionID: Number(selectedSection), attendances: payload });
-      alert('Class attendance successfully finalized and recorded.');
+      await api.post('/faculty/mark-attendance', { 
+        sectionID: Number(selectedSection), 
+        lectureNumber: Number(selectedLecture),
+        attendances: payload 
+      });
+      alert(`Lecture ${selectedLecture} attendance successfully finalized and recorded.`);
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || 'Failed to submit attendance');
@@ -69,19 +77,20 @@ const Attendance = () => {
     <div className="container mt-4 pb-5">
       <div className="mb-4 text-start">
         <h3 className="fw-bold text-white">Class Daily Attendance Registry</h3>
-        <p className="text-secondary">Select an active section to roll-call students and record daily attendance logs.</p>
+        <p className="text-secondary">Select an active section and lecture number to roll-call students and record daily attendance logs.</p>
       </div>
 
       <div className="glass-card mb-4 p-4">
         <div className="row align-items-center">
-          <div className="col-md-6 text-start">
+          <div className="col-md-5 text-start">
             <label className="form-label text-secondary small fw-medium">Active Class Section</label>
             <select 
               className="form-select form-glass-control" 
               value={selectedSection} 
               onChange={e => { 
-                setSelectedSection(e.target.value); 
-                loadStudents(e.target.value); 
+                const sec = e.target.value;
+                setSelectedSection(sec); 
+                loadStudents(sec, selectedLecture); 
               }}
             >
               <option value="">-- Choose Section --</option>
@@ -92,7 +101,24 @@ const Attendance = () => {
               ))}
             </select>
           </div>
-          <div className="col-md-6 text-md-end mt-3 mt-md-0">
+          <div className="col-md-3 text-start mt-3 mt-md-0">
+            <label className="form-label text-secondary small fw-medium">Lecture (1-16)</label>
+            <select 
+              className="form-select form-glass-control" 
+              value={selectedLecture} 
+              onChange={e => { 
+                const lec = e.target.value;
+                setSelectedLecture(lec); 
+                loadStudents(selectedSection, lec); 
+              }}
+            >
+              <option value="">-- Choose Lecture --</option>
+              {Array.from({ length: 16 }, (_, i) => i + 1).map(num => (
+                <option key={num} value={num}>Lecture {num}</option>
+              ))}
+            </select>
+          </div>
+          <div className="col-md-4 text-md-end mt-3 mt-md-0">
             {students.length > 0 && (
               <div className="d-flex justify-content-md-end gap-2">
                 <button className="btn btn-glass-secondary btn-sm" onClick={() => markAll(true)}>Mark All Present</button>
@@ -111,21 +137,21 @@ const Attendance = () => {
         </div>
       )}
 
-      {!loading && selectedSection && students.length === 0 && (
+      {!loading && selectedSection && selectedLecture && students.length === 0 && (
         <div className="glass-card text-center p-5">
           <h5 className="text-secondary">No Registered Students</h5>
           <p className="text-secondary mb-0">No students are currently enrolled in this class section.</p>
         </div>
       )}
 
-      {!loading && !selectedSection && (
+      {!loading && (!selectedSection || !selectedLecture) && (
         <div className="glass-card text-center p-5">
-          <h5 className="text-secondary">No Section Selected</h5>
-          <p className="text-secondary mb-0">Choose a course section from the dropdown list above to view roster.</p>
+          <h5 className="text-secondary">Section or Lecture Not Selected</h5>
+          <p className="text-secondary mb-0">Choose both a course section and a lecture number from the options above to view the roster.</p>
         </div>
       )}
 
-      {!loading && students.length > 0 && (
+      {!loading && selectedSection && selectedLecture && students.length > 0 && (
         <div>
           {/* Card list of students */}
           <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-4">

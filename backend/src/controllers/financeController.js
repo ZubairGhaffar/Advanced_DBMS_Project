@@ -18,7 +18,7 @@ exports.getFeeSlip = async (req, res) => {
 
     const rows = await result.outBinds.p_cursor.getRows(1000);
     await result.outBinds.p_cursor.close();
-    return res.json(rows);
+    return res.json(oracle.processRows(rows));
   } catch (err) {
     console.error('Fee slip error', err);
     return res.status(500).json({ message: 'Internal server error' });
@@ -54,7 +54,7 @@ exports.searchCourses = async (req, res) => {
 
     const rows = await result.outBinds.p_cursor.getRows(1000);
     await result.outBinds.p_cursor.close();
-    return res.json(rows);
+    return res.json(oracle.processRows(rows));
   } catch (err) {
     console.error('Search courses error', err);
     return res.status(500).json({ message: 'Internal server error' });

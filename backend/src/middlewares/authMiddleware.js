@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const als = require('../utils/als');
 
 function verifyToken(req, res, next) {
   const authHeader = req.headers['authorization'] || req.headers['Authorization'];
@@ -9,7 +10,9 @@ function verifyToken(req, res, next) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = { role: decoded.role, referenceID: decoded.referenceID };
-    return next();
+    return als.run(req.user, () => {
+      next();
+    });
   } catch (err) {
     return res.status(401).json({ message: 'Invalid or expired token' });
   }

@@ -2,12 +2,12 @@ const oracledb = require('oracledb');
 const oracle = require('../utils/oracleHelper');
 
 exports.markAttendance = async (req, res) => {
-  const { sectionID, attendances } = req.body; // attendances: [{studentID, present}, ...]
-  if (!sectionID || !Array.isArray(attendances)) return res.status(400).json({ message: 'Missing fields' });
+  const { sectionID, lectureNumber, attendances } = req.body; // attendances: [{studentID, present}, ...]
+  if (!sectionID || !lectureNumber || !Array.isArray(attendances)) return res.status(400).json({ message: 'Missing fields' });
 
   const jsonPayload = JSON.stringify(attendances);
-  const plsql = `BEGIN MarkAttendance(:p_sectionID, :p_json); END;`;
-  const binds = { p_sectionID: sectionID, p_json: jsonPayload };
+  const plsql = `BEGIN MarkAttendance(:p_sectionID, :p_lectureNumber, :p_json); END;`;
+  const binds = { p_sectionID: Number(sectionID), p_lectureNumber: Number(lectureNumber), p_json: jsonPayload };
 
   try {
     await oracle.execute(plsql, binds, { autoCommit: true });
@@ -66,12 +66,29 @@ exports.getWorkload = async (req, res) => {
 };
 
 exports.getSectionStudents = async (req, res) => {
-  const sectionID = req.query.sectionID;
+  const { sectionID, lectureNumber } = req.query;
   if (!sectionID) return res.status(400).json({ message: 'sectionID required' });
 
-  const sql = `SELECT * FROM vw_SectionStudents WHERE section_id = :sectionID`;
+  let sql;
+  let binds;
+  if (lectureNumber) {
+    sql = `
+      SELECT e.enrollment_id, e.section_id, s.student_id, 
+             s.first_name || ' ' || s.last_name AS student_name,
+             ar.status AS attendance_status
+        FROM enrollments e
+        JOIN students s ON e.student_id = s.student_id
+        LEFT JOIN attendance_records ar ON e.enrollment_id = ar.enrollment_id AND ar.lecture_number = :lectureNumber
+       WHERE e.section_id = :sectionID
+    `;
+    binds = { sectionID: Number(sectionID), lectureNumber: Number(lectureNumber) };
+  } else {
+    sql = `SELECT * FROM vw_SectionStudents WHERE section_id = :sectionID`;
+    binds = { sectionID: Number(sectionID) };
+  }
+
   try {
-    const result = await oracle.execute(sql, { sectionID }, { outFormat: oracledb.OUT_FORMAT_OBJECT });
+    const result = await oracle.execute(sql, binds, { outFormat: oracledb.OUT_FORMAT_OBJECT });
     return res.json(result.rows);
   } catch (err) {
     console.error('Section students error', err);

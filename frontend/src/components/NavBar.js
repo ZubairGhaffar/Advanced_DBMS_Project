@@ -46,6 +46,7 @@ const NavBar = () => {
                 <li className="nav-item"><Link className={`nav-link ${isActive('/admin/faculty')}`} to="/admin/faculty">Manage Faculty</Link></li>
                 <li className="nav-item"><Link className={`nav-link ${isActive('/admin/courses')}`} to="/admin/courses">Courses & Sections</Link></li>
                 <li className="nav-item"><Link className={`nav-link ${isActive('/admin/hostel')}`} to="/admin/hostel">Allocate Hostel</Link></li>
+                <li className="nav-item"><Link className={`nav-link ${isActive('/admin/library')}`} to="/admin/library">Manage Library</Link></li>
               </>
             )}
           </ul>

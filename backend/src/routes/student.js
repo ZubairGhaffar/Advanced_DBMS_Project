@@ -13,5 +13,11 @@ router.get('/fee-slip', verifyToken, isStudent, studentController.getFeeSlip);
 router.get('/library-overdue', verifyToken, isStudent, studentController.getLibraryOverdue);
 router.get('/result-card', verifyToken, isStudent, studentController.getResultCard);
 router.get('/transcript', verifyToken, isStudent, studentController.downloadTranscript);
+router.get('/enrolled-courses', verifyToken, isStudent, studentController.getEnrolledCourses);
+router.get('/detailed-attendance', verifyToken, isStudent, studentController.getDetailedAttendance);
+
+// Extra Library routes
+router.get('/library/books', verifyToken, isStudent, studentController.getLibraryBooks);
+router.get('/library/my-issues', verifyToken, isStudent, studentController.getMyLibraryIssues);
 
 module.exports = router;
