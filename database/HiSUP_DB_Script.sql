@@ -1240,7 +1240,15 @@ BEGIN
   l_role := SUBSTR(l_identifier, 1, INSTR(l_identifier, ':') - 1);
   l_refid := SUBSTR(l_identifier, INSTR(l_identifier, ':') + 1);
 
-  IF p_object = 'ENROLLMENTS' OR p_object = 'GRADES' OR p_object = 'FEE_PAYMENTS' THEN
+  IF p_object = 'ENROLLMENTS' THEN
+    IF l_role = 'Student' THEN
+      RETURN 'student_id = ' || l_refid;
+    ELSIF l_role = 'Admin' OR l_role = 'Finance' OR l_role = 'Faculty' THEN
+      RETURN '1=1';
+    ELSE
+      RETURN '1 = 0';
+    END IF;
+  ELSIF p_object = 'FEE_PAYMENTS' THEN
     IF l_role = 'Student' THEN
       RETURN 'student_id = ' || l_refid;
     ELSIF l_role = 'Admin' OR l_role = 'Finance' THEN
@@ -1248,10 +1256,18 @@ BEGIN
     ELSE
       RETURN '1 = 0';
     END IF;
+  ELSIF p_object = 'GRADES' THEN
+    IF l_role = 'Student' THEN
+      RETURN 'enrollment_id IN (SELECT enrollment_id FROM enrollments WHERE student_id = ' || l_refid || ')';
+    ELSIF l_role = 'Admin' OR l_role = 'Finance' OR l_role = 'Faculty' THEN
+      RETURN '1=1';
+    ELSE
+      RETURN '1 = 0';
+    END IF;
   ELSIF p_object = 'SECTIONS' THEN
     IF l_role = 'Faculty' THEN
       RETURN 'faculty_id = ' || l_refid;
-    ELSIF l_role = 'Admin' THEN
+    ELSIF l_role = 'Admin' OR l_role = 'Student' OR l_role = 'Finance' THEN
       RETURN '1=1';
     ELSE
       RETURN '1 = 0';
