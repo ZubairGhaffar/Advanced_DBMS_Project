@@ -284,6 +284,7 @@ CREATE TABLE fee_payments (
   reference VARCHAR2(200),
   bank_account_raw VARCHAR2(100),
   bank_account_encrypted RAW(2000),
+  semester VARCHAR2(20) DEFAULT 'Fall' NOT NULL,
   status VARCHAR2(20) DEFAULT 'Pending' NOT NULL,
   CONSTRAINT fk_payment_student FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE
 );
@@ -448,6 +449,28 @@ BEGIN
 END;
 /
 
+CREATE OR REPLACE FUNCTION fn_GetSemesterOutstanding(p_student_id NUMBER, p_semester VARCHAR2) RETURN NUMBER IS
+  l_due NUMBER;
+  l_paid NUMBER;
+BEGIN
+  SELECT NVL(SUM(fs.amount),0)
+    INTO l_due
+    FROM fee_structures fs
+    JOIN students s ON s.program_id = fs.program_id
+   WHERE s.student_id = p_student_id
+     AND fs.semester = p_semester;
+
+  SELECT NVL(SUM(fp.amount),0)
+    INTO l_paid
+    FROM fee_payments fp
+   WHERE fp.student_id = p_student_id
+     AND fp.semester = p_semester
+     AND fp.status IN ('Approved', 'Completed');
+
+  RETURN GREATEST(l_due - l_paid, 0);
+END;
+/
+
 CREATE OR REPLACE FUNCTION fn_GetAttendancePercentage(p_student_id NUMBER) RETURN NUMBER IS
   l_present NUMBER;
   l_total NUMBER;
@@ -476,18 +499,20 @@ END;
 /
 
 CREATE OR REPLACE FUNCTION fn_CalculateCGPA(p_student_id NUMBER) RETURN NUMBER IS
-  l_total_points NUMBER;
-  l_count NUMBER;
+  l_total_grade_credits NUMBER;
+  l_total_credits NUMBER;
 BEGIN
-  SELECT NVL(SUM(g.grade_points),0), COUNT(*)
-    INTO l_total_points, l_count
+  SELECT NVL(SUM(g.grade_points * c.credit_hours), 0), NVL(SUM(c.credit_hours), 0)
+    INTO l_total_grade_credits, l_total_credits
     FROM grades g
     JOIN enrollments e ON g.enrollment_id = e.enrollment_id
+    JOIN sections sec ON e.section_id = sec.section_id
+    JOIN courses c ON sec.course_id = c.course_id
    WHERE e.student_id = p_student_id;
-  IF l_count = 0 THEN
+  IF l_total_credits = 0 THEN
     RETURN 0;
   END IF;
-  RETURN ROUND(l_total_points / l_count, 2);
+  RETURN ROUND(l_total_grade_credits / l_total_credits, 2);
 END;
 /
 
@@ -571,12 +596,13 @@ CREATE OR REPLACE PROCEDURE ProcessFeePayment(
   p_method IN VARCHAR2,
   p_reference IN VARCHAR2,
   p_bank_account IN VARCHAR2,
+  p_semester IN VARCHAR2,
   p_out_receipt OUT VARCHAR2
 ) AS
   l_outstanding NUMBER;
 BEGIN
-  IF p_student_id IS NULL OR p_amount IS NULL OR p_method IS NULL THEN
-    RAISE_APPLICATION_ERROR(-20001, 'Student ID, amount and payment method are required.');
+  IF p_student_id IS NULL OR p_amount IS NULL OR p_method IS NULL OR p_semester IS NULL THEN
+    RAISE_APPLICATION_ERROR(-20001, 'Student ID, amount, payment method and semester are required.');
   END IF;
 
   l_outstanding := fn_GetOutstandingFee(p_student_id);
@@ -584,8 +610,8 @@ BEGIN
     RAISE_APPLICATION_ERROR(-20006, 'Payment amount must be positive.');
   END IF;
 
-  INSERT INTO fee_payments (student_id, amount, payment_method, reference, bank_account_raw, bank_account_encrypted)
-  VALUES (p_student_id, p_amount, p_method, p_reference, p_bank_account, fn_encrypt_value(p_bank_account));
+  INSERT INTO fee_payments (student_id, amount, payment_method, reference, bank_account_raw, bank_account_encrypted, semester)
+  VALUES (p_student_id, p_amount, p_method, p_reference, p_bank_account, fn_encrypt_value(p_bank_account), p_semester);
 
   p_out_receipt := 'RCPT-' || TO_CHAR(SYSDATE,'YYYYMMDDHH24MISS') || '-' || TO_CHAR(p_student_id);
   COMMIT;
@@ -895,10 +921,11 @@ BEGIN
            fs.amount,
            fp.payment_date,
            fp.amount AS paid_amount,
-           fn_GetOutstandingFee(p_student_id) AS outstanding_balance
+           fn_GetSemesterOutstanding(p_student_id, fs.semester) AS outstanding_balance,
+           fp.status AS payment_status
       FROM fee_structures fs
       JOIN students s ON s.program_id = fs.program_id
-      LEFT JOIN fee_payments fp ON fp.student_id = s.student_id
+      LEFT JOIN fee_payments fp ON fp.student_id = s.student_id AND fp.semester = fs.semester
      WHERE s.student_id = p_student_id;
 END;
 /
@@ -1077,6 +1104,7 @@ SELECT s.student_id,
        s.first_name || ' ' || s.last_name AS student_name,
        c.course_code,
        c.course_title,
+       c.credit_hours,
        g.grade_value,
        g.letter_grade,
        g.grade_points,

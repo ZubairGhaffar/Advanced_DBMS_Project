@@ -67,7 +67,7 @@ exports.getFeePayments = async (req, res) => {
   try {
     const result = await oracle.execute(
       `SELECT fp.payment_id, fp.student_id, s.first_name || ' ' || s.last_name AS student_name, 
-              fp.amount, fp.payment_method, fp.payment_date, fp.reference, fp.bank_account_raw AS bank_account, fp.status
+              fp.amount, fp.payment_method, fp.payment_date, fp.reference, fp.bank_account_raw AS bank_account, fp.status, fp.semester
        FROM fee_payments fp
        JOIN students s ON fp.student_id = s.student_id
        ORDER BY fp.payment_date DESC`,

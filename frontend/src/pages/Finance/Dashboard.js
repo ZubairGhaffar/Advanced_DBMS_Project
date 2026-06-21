@@ -128,6 +128,7 @@ const FinanceDashboard = () => {
                       <th>Student Name (ID)</th>
                       <th>Amount (PKR)</th>
                       <th>Method</th>
+                      <th>Semester</th>
                       <th>Reference</th>
                       <th>Bank Account</th>
                       <th>Date</th>
@@ -147,6 +148,7 @@ const FinanceDashboard = () => {
                           <span className="fw-bold text-white">{Number(p.AMOUNT).toLocaleString()}</span>
                         </td>
                         <td>{p.PAYMENT_METHOD}</td>
+                        <td><span className="badge bg-secondary text-white">{p.SEMESTER || p.semester}</span></td>
                         <td><code>{p.REFERENCE || 'N/A'}</code></td>
                         <td><code>{p.BANK_ACCOUNT || 'N/A'}</code></td>
                         <td>{new Date(p.PAYMENT_DATE).toLocaleDateString()}</td>

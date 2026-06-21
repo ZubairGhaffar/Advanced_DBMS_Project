@@ -22,22 +22,7 @@ const Dashboard = () => {
     fetchData();
   }, [user]);
 
-  const downloadTranscript = async () => {
-    try {
-      const res = await api.get('/student/transcript', { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `transcript_${user?.referenceID || 'student'}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error(err);
-      alert('Unable to download transcript at this moment.');
-    }
-  };
+
 
   if (loading) {
     return (
@@ -82,18 +67,7 @@ const Dashboard = () => {
             </h1>
             <p className="text-secondary m-0 mt-1">Student ID: {data.STUDENT_ID || data.student_id} | Academic status is active.</p>
           </div>
-          <button 
-            className="btn btn-glass" 
-            onClick={downloadTranscript}
-            disabled={outstandingFees > 0}
-            title={outstandingFees > 0 ? "Withheld due to outstanding fees" : "Download Transcript"}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-file-earmark-pdf-fill me-2" viewBox="0 0 16 16">
-              <path d="M5.523 12.424c.14-.082.293-.162.459-.238a7.878 7.878 0 0 1-.45.606c-.28.337-.498.516-.635.508-.077-.014-.202-.097-.2-.325.007-.22.114-.427.226-.606a5.176 5.176 0 0 1 .599-.606Z"/>
-              <path d="M8 0a1 1 0 0 1 1 1v12h1v-2h1.5a1.5 1.5 0 0 0 0-3H10V7h2V5H9V1H8v13.5a.5.5 0 0 1-1 0V1H1V0h7Z"/>
-            </svg>
-            {outstandingFees > 0 ? 'Transcript Withheld 🔒' : 'Download Transcript'}
-          </button>
+
         </div>
       </div>
 

@@ -6,6 +6,7 @@ const PayFee = () => {
   const [method, setMethod] = useState('Card');
   const [reference, setReference] = useState('');
   const [bankAccount, setBankAccount] = useState('');
+  const [semester, setSemester] = useState('Fall');
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -19,7 +20,8 @@ const PayFee = () => {
         amount: parseFloat(amount),
         method,
         reference,
-        bankAccount
+        bankAccount,
+        semester
       });
       setMessage({
         type: 'success',
@@ -57,6 +59,19 @@ const PayFee = () => {
             )}
 
             <form onSubmit={handleSubmit}>
+              <div className="mb-3">
+                <label className="form-label text-secondary small fw-medium">Semester</label>
+                <select 
+                  className="form-select form-glass-control" 
+                  value={semester} 
+                  onChange={e => setSemester(e.target.value)}
+                >
+                  <option value="Fall">Fall</option>
+                  <option value="Spring">Spring</option>
+                  <option value="Summer">Summer</option>
+                </select>
+              </div>
+
               <div className="mb-3">
                 <label className="form-label text-secondary small fw-medium">Payment Amount (PKR)</label>
                 <input 

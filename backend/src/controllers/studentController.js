@@ -118,19 +118,20 @@ exports.enroll = async (req, res) => {
 
 exports.payFee = async (req, res) => {
   const studentID = req.user && req.user.referenceID ? req.user.referenceID : req.body.studentID;
-  const { amount, method, reference, bankAccount } = req.body;
-  if (!studentID || !amount || !method) return res.status(400).json({ message: 'Missing payment fields' });
+  const { amount, method, reference, bankAccount, semester } = req.body;
+  if (!studentID || !amount || !method || !semester) return res.status(400).json({ message: 'Missing payment fields' });
 
   const conn = await oracle.getConnection();
   try {
     await conn.execute('BEGIN NULL; END;');
-    const plsql = `BEGIN ProcessFeePayment(:p_studentID, :p_amount, :p_method, :p_reference, :p_bankAccount, :out_receipt); END;`;
+    const plsql = `BEGIN ProcessFeePayment(:p_studentID, :p_amount, :p_method, :p_reference, :p_bankAccount, :p_semester, :out_receipt); END;`;
     const binds = {
       p_studentID: studentID,
       p_amount: amount,
       p_method: method,
       p_reference: reference || null,
       p_bankAccount: bankAccount || null,
+      p_semester: semester,
       out_receipt: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 4000 }
     };
     const result = await conn.execute(plsql, binds);
@@ -326,7 +327,9 @@ exports.getEnrolledCourses = async (req, res) => {
       JOIN courses c ON sec.course_id = c.course_id
       JOIN faculty f ON sec.faculty_id = f.faculty_id
       JOIN departments d ON f.department_id = d.dept_id
+      LEFT JOIN grades g ON e.enrollment_id = g.enrollment_id
      WHERE e.student_id = :id
+       AND g.grade_id IS NULL
   `;
   try {
     const result = await oracle.execute(sql, { id: Number(studentID) }, { outFormat: oracledb.OUT_FORMAT_OBJECT });

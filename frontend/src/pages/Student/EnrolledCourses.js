@@ -58,8 +58,8 @@ const EnrolledCourses = () => {
   return (
     <div className="container mt-4 pb-5">
       <div className="mb-4">
-        <h3 className="fw-bold text-white">My Courses & Attendance</h3>
-        <p className="text-secondary">View active course schedules, contact instructors, and track daily attendance status.</p>
+        <h3 className="fw-bold text-white">My Courses & Attendance (Current Semester)</h3>
+        <p className="text-secondary">View your active semester enrollments, contact instructors, and track daily attendance status.</p>
       </div>
 
       <div className="row gy-4">
