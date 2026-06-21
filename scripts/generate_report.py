@@ -163,10 +163,36 @@ def create_report():
         p_caption.alignment = WD_ALIGN_PARAGRAPH.CENTER
         p_caption.paragraph_format.space_before = Pt(4)
         p_caption.paragraph_format.space_after = Pt(12)
-        run_cap = p_caption.add_run(f"Figure: Demonstration of {label}")
+        run_cap = p_caption.add_run(f"Figure: Placeholder table for {label}")
         run_cap.font.size = Pt(9.5)
         run_cap.font.italic = True
         run_cap.font.color.rgb = RGBColor(127, 140, 141)
+
+    def add_screenshot(image_name, label):
+        image_path = os.path.join("docs", "screenshots", image_name)
+        if os.path.exists(image_path):
+            try:
+                p = doc.add_paragraph()
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                p.paragraph_format.space_before = Pt(6)
+                p.paragraph_format.space_after = Pt(6)
+                run = p.add_run()
+                run.add_picture(image_path, width=Inches(6.0))
+                
+                p_caption = doc.add_paragraph()
+                p_caption.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                p_caption.paragraph_format.space_before = Pt(4)
+                p_caption.paragraph_format.space_after = Pt(12)
+                run_cap = p_caption.add_run(f"Figure: Demonstration of {label}")
+                run_cap.font.size = Pt(9.5)
+                run_cap.font.italic = True
+                run_cap.font.color.rgb = RGBColor(127, 140, 141)
+                return
+            except Exception as e:
+                print(f"Error loading image {image_path}: {e}")
+        
+        # Fallback
+        add_screenshot_placeholder(label)
 
     # PAGE 1: TITLE PAGE
     print("Writing Title Page...")
@@ -217,14 +243,21 @@ def create_report():
     # PAGE 2: TABLE OF CONTENTS
     print("Writing Table of Contents placeholder...")
     add_styled_heading("Table of Contents", level=1)
-    add_p("This section contains the project report Table of Contents. Open this document in Microsoft Word, right-click inside the field placeholder below, and choose 'Update Field' to dynamically construct the headings list with their corresponding page numbers.", italic=True)
+    add_p("This section contains the project report Table of Contents. Open this document in Microsoft Word, right-click inside the Table of Contents field, and choose 'Update Field' to dynamically construct the headings list with their corresponding page numbers.", italic=True)
     
     toc_p = doc.add_paragraph()
     toc_p.paragraph_format.space_before = Pt(24)
     toc_p.paragraph_format.space_after = Pt(24)
-    toc_run = toc_p.add_run("[DYNAMIC TABLE OF CONTENTS FIELD - UPDATE IN MS WORD]")
-    toc_run.bold = True
-    toc_run.font.color.rgb = RGBColor(127, 140, 141)
+    
+    run = toc_p.add_run()
+    fldChar1 = parse_xml(r'<w:fldChar {} w:fldCharType="begin"/>'.format(nsdecls('w')))
+    instrText = parse_xml(r'<w:instrText {} xml:space="preserve"> TOC \o "1-3" \h \z \u </w:instrText>'.format(nsdecls('w')))
+    fldChar2 = parse_xml(r'<w:fldChar {} w:fldCharType="separate"/>'.format(nsdecls('w')))
+    fldChar3 = parse_xml(r'<w:fldChar {} w:fldCharType="end"/>'.format(nsdecls('w')))
+    run._r.append(fldChar1)
+    run._r.append(instrText)
+    run._r.append(fldChar2)
+    run._r.append(fldChar3)
     
     doc.add_page_break()
 
