@@ -51,15 +51,24 @@ The system utilizes **Virtual Private Database (VPD)** security policy constrain
    ```bash
    npm install
    ```
-3. Create a `.env` file in the root of the `backend/` directory and configure your connection environment variables:
-   ```env
-   PORT=4000
-   NODE_ENV=development
-   ORACLE_USER=system
-   ORACLE_PASSWORD=your_oracle_password
-   ORACLE_CONNECTION_STRING=localhost:1521/XE
-   JWT_SECRET=your_jwt_secret_token
+3. **Environment Setup (`.env`)**:
+   Duplicate the provided configuration template:
+   ```bash
+   copy .env.example .env
    ```
+   Open the newly created `.env` file and configure your local settings:
+   ```env
+   ORACLE_USER=system                         # Your Oracle DB username (e.g. system)
+   ORACLE_PASSWORD=your_db_password           # Your Oracle DB password
+   ORACLE_CONNECTION_STRING=localhost:1521/XE # Host:port/serviceName of your DB instance
+   PORT=4000                                  # Port the Express server will listen on
+   JWT_SECRET=your_jwt_secret_token           # Custom key for securing JSON Web Tokens
+   JWT_EXPIRES_IN=8h                          # Expiry duration of user login sessions
+   ```
+   
+   > [!IMPORTANT]
+   > The `.env` file contains database access credentials. It is registered in `.gitignore` and must **never** be committed or pushed to public repositories.
+   
 4. Start the backend development server:
    ```bash
    npm start
