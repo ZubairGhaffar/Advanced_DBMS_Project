@@ -240,7 +240,7 @@ def create_report():
     add_p("Administrators act as the system configuration operators. They configure core department structures, program curricula, catalog courses, establish academic sections, create user login credentials, assign faculty members to sections, and monitor administrative logs. They have unrestricted read/write permission to audit logs and base master records. This allows the administrative staff to manage the entire structure of the portal from a central control panel.", bold_prefix="1. Admin Role: ")
     add_screenshot_placeholder("Admin Dashboard Portal")
     
-    add_p("Students can access a comprehensive dashboard showing their term GPA, class attendance summaries, and outstanding fee balances. The student interface allows course registration (with dynamic, lock-protected seat validation), viewing fee structures, processing fee payments, checking out library books, returning library items, and downloading transcript PDF summaries. It is designed to be user-friendly and fully self-service, eliminating the need for manual registrations.", bold_prefix="2. Student Role: ")
+    add_p("Students can access a comprehensive dashboard showing their cumulative GPA (CGPA), class attendance summaries, and outstanding fee balances. The student interface allows course registration (with dynamic, lock-protected seat validation), viewing fee structures, processing fee payments semester-wise, checking out library books, returning library items, and viewing their courses and grades grouped by previous semesters along with their Semester GPA (SGPA) and overall CGPA. Downloading transcripts has been disabled for security/policy reasons. It is designed to be user-friendly and fully self-service.", bold_prefix="2. Student Role: ")
     add_screenshot_placeholder("Student Dashboard Portal")
     
     add_p("Faculty members utilize the portal to manage academic classes assigned to them. They can view student rosters, record daily attendance for up to 16 lectures per term, input exam grades, update student score cards, and view workload ranking reports that detail their section capacities and enrolled student counts. This facilitates real-time entry of performance indicators.", bold_prefix="3. Faculty Role: ")
@@ -393,9 +393,10 @@ END;""")
         ("fn_GetLetterGrade", "Translates numeric student scores into official letter grades (e.g. A+, B, F)."),
         ("fn_CalculateGradePoints", "Translates numeric student scores into grade points (e.g. 4.0, 3.0, 0.0) for GPA calculations."),
         ("fn_GetOutstandingFee", "Computes outstanding student balance by subtracting payments from program fee structures."),
+        ("fn_GetSemesterOutstanding", "Computes the outstanding fee balance for a student for a specific semester by subtracting approved semester payments from program fee structures."),
         ("fn_GetAttendancePercentage", "Calculates the student's attendance percentage based on present vs absent lecture counts."),
         ("fn_IsLibraryItemAvailable", "Checks copy inventories to return whether a library book is available for borrowing."),
-        ("fn_CalculateCGPA", "Averages grade points across all semesters to return a student's cumulative CGPA.")
+        ("fn_CalculateCGPA", "Calculates the student's cumulative CGPA weighted by course credit hours across all semesters.")
     ]
     for name, desc in functions_list:
         add_p(desc, bold_prefix=f"* Function: `{name}` — ")
@@ -424,18 +425,20 @@ END;""")
 
     add_p("fn_CalculateCGPA Function:", bold_prefix="2. ")
     add_code_block("""CREATE OR REPLACE FUNCTION fn_CalculateCGPA(p_student_id NUMBER) RETURN NUMBER IS
-  l_total_points NUMBER;
-  l_count NUMBER;
+  l_total_grade_credits NUMBER;
+  l_total_credits NUMBER;
 BEGIN
-  SELECT NVL(SUM(g.grade_points),0), COUNT(*)
-    INTO l_total_points, l_count
+  SELECT NVL(SUM(g.grade_points * c.credit_hours), 0), NVL(SUM(c.credit_hours), 0)
+    INTO l_total_grade_credits, l_total_credits
     FROM grades g
     JOIN enrollments e ON g.enrollment_id = e.enrollment_id
+    JOIN sections sec ON e.section_id = sec.section_id
+    JOIN courses c ON sec.course_id = c.course_id
    WHERE e.student_id = p_student_id;
-  IF l_count = 0 THEN
+  IF l_total_credits = 0 THEN
     RETURN 0;
   END IF;
-  RETURN ROUND(l_total_points / l_count, 2);
+  RETURN ROUND(l_total_grade_credits / l_total_credits, 2);
 END;""")
         
     # Triggers
