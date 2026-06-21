@@ -19,15 +19,61 @@ exports.markAttendance = async (req, res) => {
   }
 };
 
+const GRADE_MAPPING = {
+  'A+': { score: '95', points: 4.0, letter: 'A+' },
+  'A':  { score: '88', points: 4.0, letter: 'A' },
+  'A-': { score: '82', points: 3.7, letter: 'A-' },
+  'B+': { score: '77', points: 3.3, letter: 'B+' },
+  'B':  { score: '72', points: 3.0, letter: 'B' },
+  'B-': { score: '67', points: 2.7, letter: 'B-' },
+  'C+': { score: '62', points: 2.3, letter: 'C+' },
+  'C':  { score: '57', points: 2.0, letter: 'C' },
+  'D':  { score: '50', points: 1.0, letter: 'D' },
+  'F':  { score: '0',  points: 0.0, letter: 'F' }
+};
+
 exports.submitGrades = async (req, res) => {
   const { sectionID, grades } = req.body; // grades: [{studentID, grade}, ...]
   if (!sectionID || !Array.isArray(grades)) return res.status(400).json({ message: 'Missing fields' });
 
-  const jsonPayload = JSON.stringify(grades);
-  const plsql = `BEGIN AddExamResult(:p_sectionID, :p_json); END;`;
-  const binds = { p_sectionID: sectionID, p_json: jsonPayload };
-
   try {
+    // 1. Fetch all enrollments for this section to map studentID to enrollmentID
+    const enrollmentsRes = await oracle.execute(
+      'SELECT enrollment_id, student_id FROM enrollments WHERE section_id = :sectionID',
+      { sectionID: Number(sectionID) },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+
+    const enrollmentMap = {};
+    for (const row of enrollmentsRes.rows) {
+      const studentId = row.STUDENT_ID !== undefined ? row.STUDENT_ID : row.student_id;
+      const enrollmentId = row.ENROLLMENT_ID !== undefined ? row.ENROLLMENT_ID : row.enrollment_id;
+      enrollmentMap[studentId] = enrollmentId;
+    }
+
+    // 2. Map payload to the schema expected by AddExamResult stored procedure
+    const formattedGrades = [];
+    for (const g of grades) {
+      const studentId = Number(g.studentID);
+      const enrollmentId = enrollmentMap[studentId];
+      if (!enrollmentId) {
+        continue; // Student not enrolled in this section
+      }
+      const letter = g.grade || 'F';
+      const mapping = GRADE_MAPPING[letter] || GRADE_MAPPING['F'];
+
+      formattedGrades.push({
+        enrollmentID: enrollmentId,
+        grade: mapping.score,
+        points: mapping.points,
+        letterGrade: mapping.letter
+      });
+    }
+
+    const jsonPayload = JSON.stringify(formattedGrades);
+    const plsql = `BEGIN AddExamResult(:p_sectionID, :p_json); END;`;
+    const binds = { p_sectionID: Number(sectionID), p_json: jsonPayload };
+
     await oracle.execute(plsql, binds, { autoCommit: true });
     return res.json({ message: 'Grades submitted' });
   } catch (err) {

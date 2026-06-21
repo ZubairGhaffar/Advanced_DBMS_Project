@@ -62,3 +62,55 @@ exports.searchCourses = async (req, res) => {
     try { await conn.close(); } catch (closeErr) { console.error('Connection close failed', closeErr); }
   }
 };
+
+exports.getFeePayments = async (req, res) => {
+  try {
+    const result = await oracle.execute(
+      `SELECT fp.payment_id, fp.student_id, s.first_name || ' ' || s.last_name AS student_name, 
+              fp.amount, fp.payment_method, fp.payment_date, fp.reference, fp.bank_account_raw AS bank_account, fp.status
+       FROM fee_payments fp
+       JOIN students s ON fp.student_id = s.student_id
+       ORDER BY fp.payment_date DESC`,
+      {},
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+    return res.json(result.rows);
+  } catch (err) {
+    console.error('getFeePayments error', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.approvePayment = async (req, res) => {
+  const { paymentID } = req.body;
+  if (!paymentID) return res.status(400).json({ message: 'paymentID required' });
+
+  try {
+    await oracle.execute(
+      "UPDATE fee_payments SET status = 'Approved' WHERE payment_id = :paymentID",
+      { paymentID: Number(paymentID) },
+      { autoCommit: true }
+    );
+    return res.json({ message: 'Payment approved successfully' });
+  } catch (err) {
+    console.error('approvePayment error', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.rejectPayment = async (req, res) => {
+  const { paymentID } = req.body;
+  if (!paymentID) return res.status(400).json({ message: 'paymentID required' });
+
+  try {
+    await oracle.execute(
+      "UPDATE fee_payments SET status = 'Rejected' WHERE payment_id = :paymentID",
+      { paymentID: Number(paymentID) },
+      { autoCommit: true }
+    );
+    return res.json({ message: 'Payment rejected successfully' });
+  } catch (err) {
+    console.error('rejectPayment error', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};

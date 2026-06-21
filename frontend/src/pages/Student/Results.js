@@ -4,6 +4,7 @@ import api from '../../api/api';
 const Results = () => {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const loadResults = async () => {
@@ -12,6 +13,9 @@ const Results = () => {
         setResults(res.data || []);
       } catch (err) {
         console.error(err);
+        if (err.response && err.response.status === 403) {
+          setError(err.response.data.message);
+        }
       } finally {
         setLoading(false);
       }
@@ -24,6 +28,25 @@ const Results = () => {
       <div className="container mt-5 text-center">
         <div className="spinner-border text-info" role="status">
           <span className="visually-hidden">Loading results...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mt-5 text-center pb-5">
+        <div className="glass-card p-5 border border-danger-5">
+          <div className="display-1 mb-4">🔒</div>
+          <h3 className="fw-bold text-white mb-3">Academic Records Withheld</h3>
+          <p className="text-secondary mx-auto mb-4" style={{ maxWidth: '500px' }}>
+            {error}
+          </p>
+          <div>
+            <a href="/student/pay-fee" className="btn btn-glass px-4 py-2 fw-bold text-decoration-none">
+              💳 Settle Outstanding Fees
+            </a>
+          </div>
         </div>
       </div>
     );

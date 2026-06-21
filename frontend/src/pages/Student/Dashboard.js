@@ -82,12 +82,17 @@ const Dashboard = () => {
             </h1>
             <p className="text-secondary m-0 mt-1">Student ID: {data.STUDENT_ID || data.student_id} | Academic status is active.</p>
           </div>
-          <button className="btn btn-glass" onClick={downloadTranscript}>
+          <button 
+            className="btn btn-glass" 
+            onClick={downloadTranscript}
+            disabled={outstandingFees > 0}
+            title={outstandingFees > 0 ? "Withheld due to outstanding fees" : "Download Transcript"}
+          >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-file-earmark-pdf-fill me-2" viewBox="0 0 16 16">
               <path d="M5.523 12.424c.14-.082.293-.162.459-.238a7.878 7.878 0 0 1-.45.606c-.28.337-.498.516-.635.508-.077-.014-.202-.097-.2-.325.007-.22.114-.427.226-.606a5.176 5.176 0 0 1 .599-.606Z"/>
               <path d="M8 0a1 1 0 0 1 1 1v12h1v-2h1.5a1.5 1.5 0 0 0 0-3H10V7h2V5H9V1H8v13.5a.5.5 0 0 1-1 0V1H1V0h7Z"/>
             </svg>
-            Download Transcript
+            {outstandingFees > 0 ? 'Transcript Withheld 🔒' : 'Download Transcript'}
           </button>
         </div>
       </div>
@@ -120,9 +125,21 @@ const Dashboard = () => {
                   </linearGradient>
                 </defs>
               </svg>
-              <div className="radial-progress-value">{gpaVal.toFixed(2)}</div>
+              <div className="radial-progress-value">
+                {outstandingFees > 0 ? (
+                  <span title="Withheld due to outstanding fees" style={{ cursor: 'help' }}>🔒</span>
+                ) : (
+                  gpaVal.toFixed(2)
+                )}
+              </div>
             </div>
-            <div className="mt-4 text-secondary small">Excellent Standing (out of 4.0)</div>
+            <div className="mt-4 text-secondary small">
+              {outstandingFees > 0 ? (
+                <span className="text-danger fw-semibold">Withheld (Pending Fees)</span>
+              ) : (
+                'Excellent Standing (out of 4.0)'
+              )}
+            </div>
           </div>
         </div>
 

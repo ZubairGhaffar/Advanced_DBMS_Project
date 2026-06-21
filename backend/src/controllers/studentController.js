@@ -164,6 +164,16 @@ exports.getResultCard = async (req, res) => {
   if (!studentID) return res.status(400).json({ message: 'studentID required' });
 
   try {
+    // Check for outstanding fees
+    const checkFeeRes = await oracle.execute(
+      'SELECT fn_GetOutstandingFee(:id) AS outstanding FROM dual',
+      { id: Number(studentID) }
+    );
+    const outstanding = Number(checkFeeRes.rows[0].OUTSTANDING || checkFeeRes.rows[0].outstanding || 0);
+    if (outstanding > 0) {
+      return res.status(403).json({ message: 'Withheld: Please pay your outstanding fees (PKR ' + outstanding.toLocaleString() + ') to view your result card.' });
+    }
+
     const result = await oracle.execute('SELECT * FROM vw_ResultCard WHERE student_id = :id', { id: Number(studentID) }, { outFormat: oracledb.OUT_FORMAT_OBJECT });
     return res.json(result.rows);
   } catch (err) {
@@ -184,6 +194,21 @@ function streamToBuffer(stream) {
 exports.downloadTranscript = async (req, res) => {
   const studentID = req.user && req.user.referenceID;
   if (!studentID) return res.status(400).json({ message: 'studentID required' });
+
+  try {
+    // Check for outstanding fees
+    const checkFeeRes = await oracle.execute(
+      'SELECT fn_GetOutstandingFee(:id) AS outstanding FROM dual',
+      { id: Number(studentID) }
+    );
+    const outstanding = Number(checkFeeRes.rows[0].OUTSTANDING || checkFeeRes.rows[0].outstanding || 0);
+    if (outstanding > 0) {
+      return res.status(403).json({ message: 'Withheld: Please pay your outstanding fees (PKR ' + outstanding.toLocaleString() + ') to download your transcript.' });
+    }
+  } catch (err) {
+    console.error('Transcript fee check error', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
 
   const conn = await oracle.getConnection();
   try {

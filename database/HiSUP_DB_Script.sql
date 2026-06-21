@@ -284,7 +284,7 @@ CREATE TABLE fee_payments (
   reference VARCHAR2(200),
   bank_account_raw VARCHAR2(100),
   bank_account_encrypted RAW(2000),
-  status VARCHAR2(20) DEFAULT 'Completed' NOT NULL,
+  status VARCHAR2(20) DEFAULT 'Pending' NOT NULL,
   CONSTRAINT fk_payment_student FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE
 );
 
@@ -441,7 +441,8 @@ BEGIN
   SELECT NVL(SUM(fp.amount),0)
     INTO l_total_paid
     FROM fee_payments fp
-   WHERE fp.student_id = p_student_id;
+   WHERE fp.student_id = p_student_id
+     AND fp.status IN ('Approved', 'Completed');
 
   RETURN GREATEST(l_total_due - l_total_paid, 0);
 END;
@@ -1482,12 +1483,12 @@ FROM enrollments e
 WHERE e.student_id = 1;
 
 -- Multiple fee payments for student1 (from 06_security_and_seed.sql)
-INSERT INTO fee_payments(student_id, amount, payment_method, payment_date, reference)
-VALUES (1, 50000, 'Card', TO_DATE('2025-08-15','YYYY-MM-DD'), 'FP001');
-INSERT INTO fee_payments(student_id, amount, payment_method, payment_date, reference)
-VALUES (1, 50000, 'Bank Transfer', TO_DATE('2025-09-10','YYYY-MM-DD'), 'FP002');
-INSERT INTO fee_payments(student_id, amount, payment_method, payment_date, reference)
-VALUES (1, 50000, 'Cash', SYSDATE, 'FP003');
+INSERT INTO fee_payments(student_id, amount, payment_method, payment_date, reference, status)
+VALUES (1, 50000, 'Card', TO_DATE('2025-08-15','YYYY-MM-DD'), 'FP001', 'Completed');
+INSERT INTO fee_payments(student_id, amount, payment_method, payment_date, reference, status)
+VALUES (1, 50000, 'Bank Transfer', TO_DATE('2025-09-10','YYYY-MM-DD'), 'FP002', 'Completed');
+INSERT INTO fee_payments(student_id, amount, payment_method, payment_date, reference, status)
+VALUES (1, 50000, 'Cash', SYSDATE, 'FP003', 'Completed');
 
 -- Add library issues for student1 (from 06_security_and_seed.sql)
 INSERT INTO library_issues(item_id, student_id, issue_date, due_date, status)
