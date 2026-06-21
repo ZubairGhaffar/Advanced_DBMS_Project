@@ -1035,3 +1035,79 @@ exports.getHostelAllotments = async (req, res) => {
   }
 };
 
+exports.approveEnrollment = async (req, res) => {
+  const { enrollmentID } = req.body;
+  if (!enrollmentID) return res.status(400).json({ message: 'enrollmentID required' });
+
+  const conn = await oracle.getConnection();
+  try {
+    // 1. Fetch section details and current enrollment info
+    const enrollInfoRes = await conn.execute(
+      `SELECT e.section_id, e.student_id, e.status, s.available_seats, c.credit_hours, s.semester, s.year
+       FROM enrollments e
+       JOIN sections s ON e.section_id = s.section_id
+       JOIN courses c ON s.course_id = c.course_id
+       WHERE e.enrollment_id = :enrollmentID`,
+      { enrollmentID: Number(enrollmentID) },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+
+    if (!enrollInfoRes.rows.length) {
+      return res.status(404).json({ message: 'Enrollment request not found' });
+    }
+
+    const { SECTION_ID, STUDENT_ID, STATUS, AVAILABLE_SEATS, CREDIT_HOURS, SEMESTER, YEAR } = enrollInfoRes.rows[0];
+
+    if (STATUS === 'Enrolled') {
+      return res.status(400).json({ message: 'Enrollment is already approved and active.' });
+    }
+
+    if (Number(AVAILABLE_SEATS || 0) <= 0) {
+      return res.status(400).json({ message: 'No seats available in this section.' });
+    }
+
+    // Double check the 18 credit limit
+    const newCourseCredits = Number(CREDIT_HOURS || 0);
+    const creditsRes = await conn.execute(
+      `SELECT NVL(SUM(c.credit_hours), 0) AS current_credits
+       FROM enrollments e
+       JOIN sections s ON e.section_id = s.section_id
+       JOIN courses c ON s.course_id = c.course_id
+       WHERE e.student_id = :studentID
+         AND s.semester = :semester
+         AND s.year = :year
+         AND e.status = 'Enrolled'`,
+      { studentID: Number(STUDENT_ID), semester: SEMESTER, year: Number(YEAR) },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+
+    const activeCredits = Number(creditsRes.rows[0].CURRENT_CREDITS || creditsRes.rows[0].current_credits || 0);
+    if (activeCredits + newCourseCredits > 18) {
+      return res.status(400).json({
+        message: `Approval failed: Student already has ${activeCredits} CH enrolled, and this course has ${newCourseCredits} CH (Max limit: 18 CH).`
+      });
+    }
+
+    // 2. Decrement available seats in the section
+    await conn.execute(
+      `UPDATE sections SET available_seats = available_seats - 1 WHERE section_id = :sectionID`,
+      { sectionID: Number(SECTION_ID) }
+    );
+
+    // 3. Update status of the enrollment to 'Enrolled'
+    await conn.execute(
+      `UPDATE enrollments SET status = 'Enrolled' WHERE enrollment_id = :enrollmentID`,
+      { enrollmentID: Number(enrollmentID) }
+    );
+
+    await conn.commit();
+    return res.json({ message: 'Enrollment request approved successfully.' });
+  } catch (err) {
+    try { await conn.rollback(); } catch (e) {}
+    console.error('approveEnrollment error', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  } finally {
+    try { await conn.close(); } catch (e) {}
+  }
+};
+

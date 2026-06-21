@@ -37,24 +37,82 @@ exports.enroll = async (req, res) => {
   const { sectionID } = req.body;
   if (!studentID || !sectionID) return res.status(400).json({ message: 'Missing studentID or sectionID' });
 
-  const plsql = `BEGIN EnrollInCourse(:p_studentID, :p_sectionID); END;`;
-  const binds = { p_studentID: Number(studentID), p_sectionID: sectionID };
+  const conn = await oracle.getConnection();
+  try {
+    // 1. Fetch details of the new section (credits, term, available seats)
+    const sectionRes = await conn.execute(
+      `SELECT c.credit_hours, s.semester, s.year, s.available_seats, c.course_code
+       FROM sections s
+       JOIN courses c ON s.course_id = c.course_id
+       WHERE s.section_id = :sectionID`,
+      { sectionID: Number(sectionID) },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
 
-  const maxRetries = 3;
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      await oracle.execute(plsql, binds, { autoCommit: true });
-      return res.json({ message: 'Enrolled successfully' });
-    } catch (err) {
-      const isDeadlock = (err && (err.errorNum === 60 || (err.message && err.message.includes('ORA-00060'))));
-      if (isDeadlock && attempt < maxRetries) {
-        await new Promise(r => setTimeout(r, 200 * attempt));
-        continue;
-      }
-      if (err && err.errorNum === 20001) return res.status(400).json({ message: err.message });
-      console.error('Enroll error', err);
-      return res.status(500).json({ message: 'Internal server error' });
+    if (!sectionRes.rows.length) {
+      return res.status(404).json({ message: 'Section not found' });
     }
+
+    const { CREDIT_HOURS, SEMESTER, YEAR, AVAILABLE_SEATS, COURSE_CODE } = sectionRes.rows[0];
+    const newCourseCredits = Number(CREDIT_HOURS || 0);
+    const termSemester = SEMESTER;
+    const termYear = Number(YEAR || 0);
+
+    if (Number(AVAILABLE_SEATS || 0) <= 0) {
+      return res.status(400).json({ message: 'No seats available in this section.' });
+    }
+
+    // 2. Check if student already has an enrollment or request for this section
+    const checkDupRes = await conn.execute(
+      `SELECT status FROM enrollments WHERE student_id = :studentID AND section_id = :sectionID`,
+      { studentID: Number(studentID), sectionID: Number(sectionID) },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+
+    if (checkDupRes.rows.length) {
+      const existingStatus = checkDupRes.rows[0].STATUS || checkDupRes.rows[0].status;
+      return res.status(400).json({ 
+        message: `You already have a ${existingStatus === 'Pending' ? 'pending request' : 'registration'} for this section.` 
+      });
+    }
+
+    // 3. Calculate current total credit hours in the target semester (including Enrolled and Pending)
+    const creditsRes = await conn.execute(
+      `SELECT NVL(SUM(c.credit_hours), 0) AS current_credits
+       FROM enrollments e
+       JOIN sections s ON e.section_id = s.section_id
+       JOIN courses c ON s.course_id = c.course_id
+       WHERE e.student_id = :studentID
+         AND s.semester = :semester
+         AND s.year = :year
+         AND e.status IN ('Enrolled', 'Pending')`,
+      { studentID: Number(studentID), semester: termSemester, year: termYear },
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+
+    const currentCredits = Number(creditsRes.rows[0].CURRENT_CREDITS || creditsRes.rows[0].current_credits || 0);
+
+    if (currentCredits + newCourseCredits > 18) {
+      return res.status(400).json({ 
+        message: `Enrolling in this course (${newCourseCredits} CH) would exceed the maximum limit of 18 credit hours for the semester (currently registered/pending: ${currentCredits} CH).` 
+      });
+    }
+
+    // 4. Insert enrollment request with 'Pending' status
+    await conn.execute(
+      `INSERT INTO enrollments (student_id, section_id, status)
+       VALUES (:studentID, :sectionID, 'Pending')`,
+      { studentID: Number(studentID), sectionID: Number(sectionID) }
+    );
+
+    await conn.commit();
+    return res.json({ message: 'Enrollment request submitted successfully and is pending Admin approval.' });
+  } catch (err) {
+    try { await conn.rollback(); } catch (e) {}
+    console.error('Enroll request error', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  } finally {
+    try { await conn.close(); } catch (e) {}
   }
 };
 

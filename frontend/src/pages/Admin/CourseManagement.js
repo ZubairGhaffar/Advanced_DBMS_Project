@@ -195,11 +195,23 @@ const CourseManagement = () => {
       alert(err.response?.data?.message || 'Failed to enroll student');
     }
   };
-  const handleDropEnrollment = async (id) => {
-    if (window.confirm('Drop this student enrollment? This will erase their attendance logs and grades for this section.')) {
+  const handleApproveEnrollment = async (id) => {
+    try {
+      await api.post('/admin/approve-enrollment', { enrollmentID: id });
+      alert('Enrollment request approved successfully.');
+      loadAllData();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to approve enrollment');
+    }
+  };
+  const handleDropEnrollment = async (id, isPending = false) => {
+    const msg = isPending 
+      ? 'Reject this enrollment request?' 
+      : 'Drop this student enrollment? This will erase their attendance logs and grades for this section.';
+    if (window.confirm(msg)) {
       try {
         await api.delete(`/admin/enrollments/${id}`);
-        alert('Enrollment dropped successfully.');
+        alert(isPending ? 'Request rejected.' : 'Enrollment dropped successfully.');
         loadAllData();
       } catch (err) {
         alert(err.response?.data?.message || 'Failed to drop enrollment');
@@ -415,49 +427,112 @@ const CourseManagement = () => {
           )}
 
           {/* --- TAB 3: ENROLLMENTS --- */}
-          {activeTab === 'enrollments' && (
-            <div>
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <h5 className="fw-semibold text-white mb-0">Active Student Registrations: {enrollments.length}</h5>
-                <button className="btn btn-glass btn-sm" onClick={handleOpenEnroll}>+ Enroll Student</button>
-              </div>
-              <div className="glass-card p-4">
-                <div className="table-responsive">
-                  <table className="table-glass">
-                    <thead>
-                      <tr>
-                        <th className="text-start">Enrollment ID</th>
-                        <th>Student Name</th>
-                        <th>Class Section ID</th>
-                        <th>Course Registered</th>
-                        <th>Semester term</th>
-                        <th>Enroll Date</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {enrollments.map(e => (
-                        <tr key={e.ENROLLMENT_ID}>
-                          <td className="text-start"><code>{e.ENROLLMENT_ID}</code></td>
-                          <td>
-                            <div className="fw-semibold text-white">{e.STUDENT_NAME}</div>
-                            <div className="text-secondary small" style={{ fontSize: '0.75rem' }}>ID: {e.STUDENT_ID}</div>
-                          </td>
-                          <td><code>{e.SECTION_ID}</code></td>
-                          <td className="small text-light">{e.COURSE_CODE} - {e.COURSE_TITLE}</td>
-                          <td className="small text-secondary">{e.SEMESTER} {e.YEAR}</td>
-                          <td className="small text-secondary">{new Date(e.ENROLL_DATE).toLocaleDateString()}</td>
-                          <td>
-                            <button className="btn btn-glass-secondary btn-sm py-1 px-2 text-danger" onClick={() => handleDropEnrollment(e.ENROLLMENT_ID)}>Drop</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+          {activeTab === 'enrollments' && (() => {
+            const pendingRequests = enrollments.filter(e => e.STATUS === 'Pending' || e.status === 'Pending');
+            const activeEnrollments = enrollments.filter(e => e.STATUS !== 'Pending' && e.status !== 'Pending');
+
+            return (
+              <div>
+                {/* Pending Requests Section */}
+                <div className="mb-5 text-start">
+                  <h5 className="fw-semibold text-warning mb-3">Pending Enrollment Requests ({pendingRequests.length})</h5>
+                  {pendingRequests.length === 0 ? (
+                    <div className="glass-card text-center p-4 text-secondary italic">
+                      No pending course enrollment requests at this time.
+                    </div>
+                  ) : (
+                    <div className="glass-card p-4">
+                      <div className="table-responsive">
+                        <table className="table-glass">
+                          <thead>
+                            <tr>
+                              <th className="text-start">Request ID</th>
+                              <th>Student Name</th>
+                              <th>Class Section ID</th>
+                              <th>Course Requested</th>
+                              <th>Semester Term</th>
+                              <th>Request Date</th>
+                              <th className="text-end">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {pendingRequests.map(e => (
+                              <tr key={e.ENROLLMENT_ID}>
+                                <td className="text-start"><code>{e.ENROLLMENT_ID}</code></td>
+                                <td>
+                                  <div className="fw-semibold text-white">{e.STUDENT_NAME}</div>
+                                  <div className="text-secondary small" style={{ fontSize: '0.75rem' }}>ID: {e.STUDENT_ID}</div>
+                                </td>
+                                <td><code>{e.SECTION_ID}</code></td>
+                                <td className="small text-light">{e.COURSE_CODE} - {e.COURSE_TITLE}</td>
+                                <td className="small text-secondary">{e.SEMESTER} {e.YEAR}</td>
+                                <td className="small text-secondary">{new Date(e.ENROLL_DATE).toLocaleDateString()}</td>
+                                <td className="text-end">
+                                  <div className="d-flex justify-content-end gap-2">
+                                    <button className="btn btn-sm btn-success px-3 fw-bold" onClick={() => handleApproveEnrollment(e.ENROLLMENT_ID)}>Approve</button>
+                                    <button className="btn btn-sm btn-danger px-3 fw-bold" onClick={() => handleDropEnrollment(e.ENROLLMENT_ID, true)}>Reject</button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Active Enrollments Section */}
+                <div className="text-start">
+                  <div className="d-flex justify-content-between align-items-center mb-3">
+                    <h5 className="fw-semibold text-white mb-0">Active Student Registrations ({activeEnrollments.length})</h5>
+                    <button className="btn btn-glass btn-sm" onClick={handleOpenEnroll}>+ Enroll Student</button>
+                  </div>
+                  {activeEnrollments.length === 0 ? (
+                    <div className="glass-card text-center p-4 text-secondary italic">
+                      No active student registrations.
+                    </div>
+                  ) : (
+                    <div className="glass-card p-4">
+                      <div className="table-responsive">
+                        <table className="table-glass">
+                          <thead>
+                            <tr>
+                              <th className="text-start">Enrollment ID</th>
+                              <th>Student Name</th>
+                              <th>Class Section ID</th>
+                              <th>Course Registered</th>
+                              <th>Semester Term</th>
+                              <th>Enroll Date</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {activeEnrollments.map(e => (
+                              <tr key={e.ENROLLMENT_ID}>
+                                <td className="text-start"><code>{e.ENROLLMENT_ID}</code></td>
+                                <td>
+                                  <div className="fw-semibold text-white">{e.STUDENT_NAME}</div>
+                                  <div className="text-secondary small" style={{ fontSize: '0.75rem' }}>ID: {e.STUDENT_ID}</div>
+                                </td>
+                                <td><code>{e.SECTION_ID}</code></td>
+                                <td className="small text-light">{e.COURSE_CODE} - {e.COURSE_TITLE}</td>
+                                <td className="small text-secondary">{e.SEMESTER} {e.YEAR}</td>
+                                <td className="small text-secondary">{new Date(e.ENROLL_DATE).toLocaleDateString()}</td>
+                                <td>
+                                  <button className="btn btn-glass-secondary btn-sm py-1 px-2 text-danger" onClick={() => handleDropEnrollment(e.ENROLLMENT_ID, false)}>Drop</button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* --- TAB 4: DEPARTMENTS & PROGRAMS --- */}
           {activeTab === 'departments' && (

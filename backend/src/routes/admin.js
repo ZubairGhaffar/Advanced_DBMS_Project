@@ -45,6 +45,7 @@ router.delete('/sections/:id', verifyToken, isAdmin, adminController.deleteSecti
 // Enrollments CRUD
 router.get('/enrollments', verifyToken, isAdmin, adminController.getEnrollments);
 router.post('/enroll', verifyToken, isAdmin, adminController.enrollStudent);
+router.post('/approve-enrollment', verifyToken, isAdmin, adminController.approveEnrollment);
 router.delete('/enrollments/:id', verifyToken, isAdmin, adminController.dropEnrollment);
 
 // Departments & Programs CRUD
