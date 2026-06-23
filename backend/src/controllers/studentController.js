@@ -347,7 +347,7 @@ exports.getEnrolledCourses = async (req, res) => {
       const attRes = await oracle.execute(attSql, { enrollment_id: row.ENROLLMENT_ID }, { outFormat: oracledb.OUT_FORMAT_OBJECT });
       const present = attRes.rows[0].PRESENT || 0;
       const total = attRes.rows[0].TOTAL || 0;
-      const pct = total > 0 ? Number(((present / total) * 100).toFixed(2)) : 100.0;
+      const pct = total > 0 ? Number(((present / total) * 100).toFixed(2)) : 0.0;
       
       enrolled.push({
         ...row,

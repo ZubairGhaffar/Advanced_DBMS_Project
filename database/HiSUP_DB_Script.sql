@@ -545,6 +545,16 @@ BEGIN
   INSERT INTO students(user_id, first_name, last_name, email, cnic_raw, cnic_encrypted, program_id)
   VALUES (p_out_student_id, p_first_name, p_last_name, p_email, p_cnic, fn_encrypt_value(p_cnic), p_program_id)
   RETURNING student_id INTO p_out_student_id;
+
+  -- Ensure fee structure of 150000 exists for the program
+  MERGE INTO fee_structures fs
+  USING (SELECT p_program_id AS program_id, 'Fall' AS semester FROM dual) src
+  ON (fs.program_id = src.program_id AND fs.semester = src.semester)
+  WHEN MATCHED THEN
+    UPDATE SET fs.amount = 150000
+  WHEN NOT MATCHED THEN
+    INSERT (program_id, amount, semester, due_date)
+    VALUES (src.program_id, 150000, src.semester, ADD_MONTHS(SYSDATE, 1));
 EXCEPTION
   WHEN DUP_VAL_ON_INDEX THEN
     RAISE_APPLICATION_ERROR(-20002, 'A student or email already exists.');
@@ -1070,7 +1080,13 @@ SELECT s.student_id,
        s.first_name || ' ' || s.last_name AS student_name,
        fn_GetAttendancePercentage(s.student_id) AS attendance_percent
   FROM students s
- WHERE fn_GetAttendancePercentage(s.student_id) < 75;
+ WHERE fn_GetAttendancePercentage(s.student_id) < 75
+   AND EXISTS (
+     SELECT 1 
+       FROM enrollments e 
+      WHERE e.student_id = s.student_id 
+        AND e.status = 'Enrolled'
+   );
 /
 
 CREATE OR REPLACE VIEW vw_LibraryOverdue AS

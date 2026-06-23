@@ -217,6 +217,16 @@ exports.createStudent = async (req, res) => {
       RETURNING student_id INTO v_student_id;
 
       UPDATE user_accounts SET reference_id = v_student_id WHERE user_id = v_user_id;
+
+      -- Ensure fee structure of 150000 exists for the program
+      MERGE INTO fee_structures fs
+      USING (SELECT :programID AS program_id, 'Fall' AS semester FROM dual) src
+      ON (fs.program_id = src.program_id AND fs.semester = src.semester)
+      WHEN MATCHED THEN
+        UPDATE SET fs.amount = 150000
+      WHEN NOT MATCHED THEN
+        INSERT (program_id, amount, semester, due_date)
+        VALUES (src.program_id, 150000, src.semester, ADD_MONTHS(SYSDATE, 1));
       
       :out_student_id := v_student_id;
     END;
